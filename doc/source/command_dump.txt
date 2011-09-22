@@ -1,0 +1,20 @@
+==============
+ubervisor-dump
+==============
+
+Synopsis
+========
+
+``ubervisor`` *dump*
+
+Description
+===========
+
+Instruct the ubervisor server to create a dump of the current group
+configurations.
+
+See Also
+========
+:manpage:`ubervisor(1)` :manpage:`ubervisor-server(1)`
+
+.. vim:spell:ft=rst

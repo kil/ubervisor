@@ -1,0 +1,42 @@
+================
+ubervisor-update
+================
+
+Synopsis
+========
+
+``ubervisor`` *update* ``[options]`` *name*
+
+Description
+===========
+
+Update configuration for group ``name``.
+
+
+Options
+=======
+
+-d, --dir DIR                   update the work directory to ``DIR``.
+-e, --stderr FILE               update standard error log file for the group to
+                                ``FILE``.
+-f, --fatal COMMAND             ``COMMAND`` to run on fatal condition.
+-H, --heartbeat COMMAND         set heartbeat command to ``COMMAND``.
+-i, --instances COUNT           set number of instances to ``COUNT``. If the
+                                new ``COUNT`` is larger then the old value,
+                                start new instances.
+-k, --killsig SIGNAL            set the default signal for the kill command to
+                                ``SIGNAL``.
+-o, --stdout FILE               set the standard out log file to ``FILE``.
+-p, --pipe COMMAND              set pipe command to ``COMMAND``.
+-s, --status STATUS             set group status to ``STATUS``. As a side
+                                effect, setting the status also resets the
+                                internal error counter. See
+				:manpage:`ubervisor(8)`
+
+
+See Also
+========
+:manpage:`ubervisor(8)`, :manpage:`ubervisor-start(8)`,
+:manpage:`ubervisor-get(8)`
+
+.. vim:spell:ft=rst

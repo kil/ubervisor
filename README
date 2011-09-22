@@ -1,0 +1,21 @@
+Ubervisor - process control daemon
+==================================
+
+You will need cmake, json-c and libevent to build ubervisor.
+On ubuntu, `apt-get install libevent-dev libjson0-dev cmake`
+
+Use `cmake . && make` to build.
+
+Building the documentation requires python and sphinx. If cmake can
+find sphinx-build, man pages can be build with `make man`. The html
+documentation is build with `man htmldoc`.
+
+Useful cmake flags
+------------------
+-DCMAKE_C_COMPILER:string=clang			(force compiler)
+-DCMAKE_INSTALL_PREFIX:string=/usr/local	(install prefix)
+
+Debugging
+---------
+delete CMakeCache.txt (!) and run cmake with `-DUV_DEBUG:bool=true` and
+recomplile.

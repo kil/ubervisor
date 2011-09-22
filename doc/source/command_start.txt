@@ -1,0 +1,76 @@
+===============
+ubervisor-start
+===============
+
+Synopsis
+========
+
+``ubervisor`` *start* ``[options]`` *name* *command* ``[command-args]``
+
+Description
+===========
+
+Create a new group with ``name`` for ``command``.
+
+
+Options
+=======
+
+-d, --dir DIR                   change dir to ``DIR`` before starting child.
+                                The default is to not change directories.
+-e, --stderr FILE               log standard error for processes in this group
+                                to ``FILE``.
+-f, --fatal COMMAND             ``COMMAND`` to run on fatal condition. See below.
+-H, --heartbeat COMMAND         run ``COMMAND`` every 5 seconds. See below.
+-g, --gid GID                   Set group id to ``GID`` for childs in this group.
+                                Ubervisor may need to run as root if this option
+                                is used.
+-h, --help                      display a short help.
+-H, --heartbeat COMMAND         run ``COMMAND`` 5 secondly. See below.
+-i, --instances COUNT           number of process to start. By default only
+                                one child is started per group.
+-k, --killsig SIGNAL            signal used to kill processes in this group.
+                                Defaults to 15 (SIGTERM). This is used as the
+                                default signal when invoking the kill command.
+-o, --stdout FILE               log standard output for processes in this group
+                                to ``FILE``.
+-p, --pipe COMMAND              pipe process output through ``COMMAND``. Not set
+                                by default.
+-s, --status STATUS             status to create group with. By default the
+                                running status (1) is used.
+-u, --uid UID                   ``UID`` to start processes as. The same
+                                limitations as for the ``-g`` option apply.
+
+
+Status Codes
+============
+
+- ``1`` the running state. Processes are restarted, when they exit.
+- ``2`` means stopped. No new processes are started.
+- ``3`` is the fatal state. Due to too many unexpected exits in a too short
+  interval, processes are not started again.
+
+Heartbeat command
+=================
+Binary executed every five seconds as ``heatbear-command process-group pid
+instance-identifier``. Where ``process-group`` is the name of the group,
+``pid`` is the process id and ``instance-identifier`` is an integer between
+``0`` and ``intance-count`` (See ``-i`` option).
+
+Fatal command
+=============
+Binary to be executed, if the process group enters the fatal state. It is
+executed as ``fatal-command process-group``.
+
+Pipe command
+============
+Redirect standard output of child processes to standard input of
+``pipe-command``. The ``pipe-command`` is started as: ``pipe-command
+process-group stdout-log-file``.
+
+See Also
+========
+:manpage:`ubervisor(1)`, :manpage:`ubervisor-update(1)`,
+:manpage:`ubervisor-get(1)`, :manpage:`ubervisor-kill(1)`
+
+.. vim:spell:ft=rst

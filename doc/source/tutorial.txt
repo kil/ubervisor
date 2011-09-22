@@ -1,0 +1,37 @@
+===========
+Quick start
+===========
+
+Getting Started
+---------------
+
+Start a ubervisor server by running::
+
+   ubervisor server -f
+
+This will run the server in foreground mode, logging to ``stdout``, so we can
+see what is going on. Now switch to another terminal and instruct the server
+to start something. We will use ``sleep``::
+
+   ubervisor start group1 /bin/sleep 1
+
+In the server terminal, you should see that the group was created and processes
+starting and exiting. To instruct ubervisor it should not continue to restart
+the program, run::
+
+   ubervisor update -s 2 group1
+
+This will set the status of the group to ``2`` (stopped). To restart it, run::
+
+   ubervisor update -s 1 group1
+
+Get a list of the groups maintained use::
+
+   ubervisor list
+
+Delete the group for the sleep command now::
+
+   ubervisor delete group1
+
+
+.. vim:spell:ft=rst

@@ -1,0 +1,14 @@
+*.o
+*.core
+*.pyc
+tags
+ubervisor
+config.h
+CMakeCache.txt
+cmake_install.cmake
+CMakeFiles
+Makefile
+uberdump_*
+doc/build
+*.un~
+*.swp

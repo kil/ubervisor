@@ -1,0 +1,41 @@
+================
+ubervisor-server
+================
+
+Synopsis
+========
+
+``ubervisor`` *server* ``[options]``
+
+Description
+===========
+
+Start ubervisor server.
+
+Options
+=======
+
+-a, --autodump          create a configuration dump after each update and start
+                        command.
+-c, --config FILE       load a dump from FILE.
+-d, --dir DIR           change to DIR after start. By default, ubervisor will
+                        change to the directory ``.uber`` in the home directory
+                        of the user it runs as.
+-f, --foreground        don't fork into background. When running in foreground,
+                        ubervisor will always log to standard output.
+-h, --help              help.
+-l, --loadlatest FILE   load most recent dump from the current directory. This is
+                        done after changing directory (either due to a ``-d``
+                        option or the default change).
+-n, --noexit            don't obey the exit command.
+-o, --logfile FILE      write log output to FILE. The default is ``uber.log`` in
+                        the home directory of the user ubervisor runs as. The
+                        log file is opened, after changing directory (either due
+                        to a ``-d`` option or the default change).
+-s, --silent            exit silently if server is already running.
+
+See Also
+========
+:manpage:`ubervisor(1)`, :manpage:`ubervisor-start(1)`
+
+.. vim:spell:ft=rst

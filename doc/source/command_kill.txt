@@ -1,0 +1,20 @@
+==============
+ubervisor-kill
+==============
+
+Synopsis
+========
+
+``ubervisor`` *kill* ``[-s signal]`` *name*
+
+Description
+===========
+
+Send the kill signal to all processes in the group *name*. If ``-s`` is
+specified, send signal ``signal`` instead of the default signal.
+
+See Also
+========
+:manpage:`ubervisor(1)`, :manpage:`ubervisor-start(1)` :manpage:`ubervisor-update(1)`
+
+.. vim:spell:ft=rst

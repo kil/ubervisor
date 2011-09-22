@@ -1,0 +1,29 @@
+Welcome to Ubervisor's documentation!
+=====================================
+
+Contents:
+
+.. toctree::
+   :maxdepth: 2
+
+   overview
+   tutorial
+   command_main
+   command_delete
+   command_dump
+   command_exit
+   command_get
+   command_kill
+   command_list
+   command_server
+   command_start
+   command_update
+
+Indices and tables
+==================
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`
+
+.. vim:spell:ft=rst

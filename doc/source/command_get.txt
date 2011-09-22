@@ -1,0 +1,37 @@
+=============
+ubervisor-get
+=============
+
+Synopsis
+========
+
+``ubervisor`` *get* ``[options]`` *name*
+
+Description
+===========
+
+Get a configuration value for group ``name``.
+
+
+Options
+=======
+
+-d, --dir        print working directory for the group.
+-D, --dump       print raw reply.
+-e, --stderr     print standard error log file name.
+-f, --fatal      print fatal_cb.
+-g, --gid        print group id processes are started with.
+-H, --heartbeat  print heartbeat command.
+-i, --instances  print number of instances.
+-k, --killsig    print signal used to kill processes.
+-o, --stdout     print standard output log file name.
+-p, --pipe       print pipe command.
+-s, --status     print status.
+-u, --uid        print user id processes are started with.
+
+
+See Also
+========
+ubervisor(1), ubervisor-start(1), ubervisor-get(1)
+
+.. vim:spell:ft=rst

@@ -1,0 +1,19 @@
+==============
+ubervisor-list
+==============
+
+Synopsis
+========
+
+``ubervisor`` *list*
+
+Description
+===========
+
+List all process groups known to the ubervisor.
+
+See Also
+========
+:manpage:`ubervisor(1)`
+
+.. vim:spell:ft=rst

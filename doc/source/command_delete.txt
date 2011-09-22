@@ -1,0 +1,19 @@
+================
+ubervisor-delete
+================
+
+Synopsis
+========
+
+``ubervisor`` *delete* *name*
+
+Description
+===========
+
+Delete process group *name*.
+
+See Also
+========
+:manpage:`ubervisor(1)`
+
+.. vim:spell:ft=rst

@@ -1,0 +1,72 @@
+=========
+ubervisor
+=========
+
+Synopsis
+========
+ubervisor [command] [command-args]
+
+Description
+===========
+
+
+
+
+Commands
+========
+
+* *delete*        delete program from ubervisor
+* *dump*          signal server to dump current configuration to a file.
+* *exit*          stop the server
+* *get*           get configuration of a group.
+* *kill*          kill all processes in a group (aka restart)
+* *list*          list groups.
+* *proxy*         multiplex stdin/out to socket.
+* *server*        start the server
+* *start*         start a program
+* *update*        modify a group
+
+
+States
+======
+
+Ubervisor knows three different states a process group can be in. ``Running``
+means processes are restarted, when (and if) they exit. ``Stopped`` means no
+new processes are started. Running processes are left alone (they can still be
+killed, of course). The third state is ``Broken`` (or *stopped by server*).
+This means the processes in the group exited repeatedly with exit codes other
+then zero or due to signals. If this happens too fast, ubervisor will stop
+the group, leaving still running processes in the group untouched.
+
+Environment
+===========
+
+This section documents the environment variables that influence the behaviour
+of ubervisor.
+
+UBERVISOR_RSH
+~~~~~~~~~~~~~
+
+Command to execute and whose standard input and output are used
+instead of a connection to a socket to communicate with the server.
+Use e.g. as ``ssh host /path/to/ubervisor proxy``.
+
+UBERVISOR_SOCKET
+~~~~~~~~~~~~~~~~
+
+Alternate path to the socket to connect to. The default is ``~/.uber/socket``.
+
+BUGS
+====
+
+Reporting Bugs
+~~~~~~~~~~~~~~
+Please report bugs to https://github.com/kil/ubervisor/issues or via email to
+kilian.klimek@googlemail.com
+
+See Also
+========
+
+:manpage:`ubervisor-start(1)`
+
+.. vim:spell:ft=rst

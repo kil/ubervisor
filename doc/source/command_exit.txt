@@ -1,0 +1,19 @@
+==============
+ubervisor-exit
+==============
+
+Synopsis
+========
+
+``ubervisor`` *exit*
+
+Description
+===========
+
+Instruct the ubervisor server to quit.
+
+See Also
+========
+:manpage:`ubervisor(1)`
+
+.. vim:spell:ft=rst
