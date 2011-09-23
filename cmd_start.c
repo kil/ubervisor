@@ -36,7 +36,7 @@
 #include "misc.h"
 #include "child_config.h"
 
-static char start_opts[] = "+d:e:f:g:hH:i:k:o:p:s:u:";
+static char start_opts[] = "+d:e:f:g:hH:i:k:o:s:u:";
 
 static struct option start_longopts[] = {
 	{ "dir",	required_argument,	NULL,	'd' },
@@ -48,7 +48,6 @@ static struct option start_longopts[] = {
 	{ "instances",	required_argument,	NULL,	'i' },
 	{ "killsig",	required_argument,	NULL,	'k' },
 	{ "stdout",	required_argument,	NULL,	'o' },
-	{ "pipe",	required_argument,	NULL,	'p' },
 	{ "status",	required_argument,	NULL,	's' },
 	{ "uid",	required_argument,	NULL,	'u' },
 	{ NULL,		0,			NULL,	0 }
@@ -70,7 +69,6 @@ help_start(void)
 	printf("\t-i, --instances COUNT number of process to start (1).\n");
 	printf("\t-k, --killsig SIGNAL  signal used to kill processes in this group (15).\n");
 	printf("\t-o, --stdout FILE     stdout log FILE (/dev/null).\n");
-	printf("\t-p, --pipe COMMAND    pipe process output through COMMAND (not set).\n");
 	printf("\t-s, --status STATUS   status to create group with (1).\n");
 	printf("\t-u, --uid UID         UID to start processes as (not set).\n");
 	printf("\n");
@@ -135,9 +133,6 @@ cmd_start(int argc, char **argv)
 			break;
 		case 'o':
 			cc->cc_stdout = optarg;
-			break;
-		case 'p':
-			cc->cc_stdout_pipe = optarg;
 			break;
 		case 's':
 			cc->cc_status = strtol(optarg, NULL, 10);

@@ -99,9 +99,6 @@ ck0 'start -f'	0 '' $UBER start -f /bin/echo tst /bin/sleep 10
 st
 ck0 'start -H'	0 '' $UBER start -H /bin/echo tst /bin/sleep 10
 st
-ck0 'start -p'	0 '' $UBER start -p /bin/cat tst /bin/sleep 10
-st
-
 
 ck0 start	0 '' $UBER start tst /bin/sleep 10
 ck0 'update -o'	0 '' $UBER update -o $TMPDIR/x tst
@@ -126,11 +123,7 @@ ck0 'get -s'	0 '2'		$UBER get -s tst
 ck0 'get -k'	0 '12'		$UBER get -k tst
 ck0 'get -H'	0 '/bin/echo'	$UBER get -H tst
 ck0 'get -f'	0 '/bin/echo'	$UBER get -f tst
-ck0 'get -p'	1 ''		$UBER get -p tst
 ck0 'get -i'	0 '2'		$UBER get -i tst
-
-ck0 'update -p'	0 '' $UBER update -p /bin/cat tst
-ck0 'get -p'	0 '' $UBER get -p tst
 
 ck0 delete	0 '' $UBER delete tst
 ck0 delete	1 '' $UBER delete tst

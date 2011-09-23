@@ -36,7 +36,7 @@
 #include "misc.h"
 #include "child_config.h"
 
-static char update_opts[] = "d:e:f:hH:i:k:o:p:s:";
+static char update_opts[] = "d:e:f:hH:i:k:o:s:";
 
 static struct option update_longopts[] = {
 	{ "dir",	required_argument,	NULL,	'd' },
@@ -47,7 +47,6 @@ static struct option update_longopts[] = {
 	{ "instances",	required_argument,	NULL,	'i' },
 	{ "killsig",	required_argument,	NULL,	'k' },
 	{ "stdout",	required_argument,	NULL,	'o' },
-	{ "pipe",	required_argument,	NULL,	'p' },
 	{ "status",	required_argument,	NULL,	's' },
 	{ NULL,		0,			NULL,	0 }
 };
@@ -67,7 +66,6 @@ help_update(void)
 	printf("\t-i, --instances COUNT number of process to start.\n");
 	printf("\t-k, --killsig SIGNAL  signal used to kill processes in this group.\n");
 	printf("\t-o, --stdout FILE     stdout log FILE.\n");
-	printf("\t-p, --pipe COMMAND    pipe process output through COMMAND.\n");
 	printf("\t-s, --status STATUS   status to create group with.\n");
 	printf("\n");
 	printf("Examples:\n");
@@ -115,9 +113,6 @@ cmd_update(int argc, char **argv)
 			break;
 		case 'o':
 			cc->cc_stdout = optarg;
-			break;
-		case 'p':
-			cc->cc_stdout_pipe = optarg;
 			break;
 		case 's':
 			cc->cc_status = strtol(optarg, NULL, 10);

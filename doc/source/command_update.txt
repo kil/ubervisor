@@ -27,7 +27,6 @@ Options
 -k, --killsig SIGNAL            set the default signal for the kill command to
                                 ``SIGNAL``.
 -o, --stdout FILE               set the standard out log file to ``FILE``.
--p, --pipe COMMAND              set pipe command to ``COMMAND``.
 -s, --status STATUS             set group status to ``STATUS``. As a side
                                 effect, setting the status also resets the
                                 internal error counter. See

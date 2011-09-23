@@ -34,8 +34,6 @@ Options
                                 default signal when invoking the kill command.
 -o, --stdout FILE               log standard output for processes in this group
                                 to ``FILE``.
--p, --pipe COMMAND              pipe process output through ``COMMAND``. Not set
-                                by default.
 -s, --status STATUS             status to create group with. By default the
                                 running status (1) is used.
 -u, --uid UID                   ``UID`` to start processes as. The same
@@ -61,12 +59,6 @@ Fatal command
 =============
 Binary to be executed, if the process group enters the fatal state. It is
 executed as ``fatal-command process-group``.
-
-Pipe command
-============
-Redirect standard output of child processes to standard input of
-``pipe-command``. The ``pipe-command`` is started as: ``pipe-command
-process-group stdout-log-file``.
 
 See Also
 ========

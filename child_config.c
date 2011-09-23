@@ -34,6 +34,7 @@
 #include "misc.h"
 #include "child_config.h"
 
+struct child_config_list		child_config_list_head;
 
 char *
 child_config_serialize(const struct child_config *cc)
@@ -61,7 +62,6 @@ child_config_serialize(const struct child_config *cc)
 	ADD("dir", cc->cc_dir);
 	ADD("heartbeat", cc->cc_heartbeat);
 	ADD("fatal_cb", cc->cc_fatal_cb);
-	ADD("stdout_pipe", cc->cc_stdout_pipe);
 	ADDINT("instances", cc->cc_instances);
 	ADDINT("status", cc->cc_status);
 	ADDINT("killsig", cc->cc_killsig);
@@ -121,7 +121,6 @@ struct child_config *child_config_from_json(json_object *obj)
 	GET(ret->cc_dir, "dir");
 	GET(ret->cc_heartbeat, "heartbeat");
 	GET(ret->cc_fatal_cb, "fatal_cb");
-	GET(ret->cc_stdout_pipe, "stdout_pipe");
 	GETINT(ret->cc_instances, "instances");
 	GETINT(ret->cc_status, "status");
 	GETINT(ret->cc_killsig, "killsig");
@@ -176,12 +175,12 @@ child_config_free(struct child_config *cc)
 	FREE(cc->cc_dir);
 	FREE(cc->cc_heartbeat);
 	FREE(cc->cc_fatal_cb);
-	FREE(cc->cc_stdout_pipe);
-	if(cc->cc_command) {
+	if (cc->cc_command) {
 		for (i = 0; cc->cc_command[i] != NULL; i++)
 			free(cc->cc_command[i]);
 		free(cc->cc_command);
 	}
+
 	free(cc);
 }
 
@@ -197,4 +196,30 @@ struct child_config *child_config_new(void)
 	cc->cc_uid = -1;
 	cc->cc_gid = -1;
 	return cc;
+}
+
+void
+child_config_insert(struct child_config *cc)
+{
+	LIST_INSERT_HEAD(&child_config_list_head, cc, cc_ent);
+}
+
+struct child_config *
+child_config_find_by_name(const char *n)
+{
+	struct child_config	*cc;
+
+	cc = LIST_FIRST(&child_config_list_head);
+	while (cc) {
+		if (!strcmp(n, cc->cc_name))
+			return cc;
+		cc = LIST_NEXT(cc, cc_ent);
+	}
+	return NULL;
+}
+
+void
+child_config_remove(struct child_config *cc)
+{
+	LIST_REMOVE(cc, cc_ent);
 }

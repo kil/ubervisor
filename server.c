@@ -78,13 +78,12 @@ struct client_con {
 	int			c_sock;
 	struct bufferevent	*c_be;
 	size_t			c_len;
+	uint16_t		c_cid;
 };
-
 
 /*
  * globals
  */
-static LIST_HEAD(child_config_list, child_config)	child_config_list_head;
 static LIST_HEAD(process_list, process)			process_list_head;
 static LIST_HEAD(client_con_list, client_con)		client_con_list_head;
 
@@ -110,7 +109,6 @@ static int c_dump(struct client_con *);
  * heartbeat interval.
  */
 #define HEARTBEAT_SEC	5
-
 
 static char		server_opts[] = "ac:d:fhlo:s";
 
@@ -156,32 +154,7 @@ drop_client_connection(struct client_con *c)
 	bufferevent_free(c->c_be);
 	close(c->c_sock);
 	LIST_REMOVE(c, c_ent);
-}
-
-static void
-child_config_insert(struct child_config *cc)
-{
-	LIST_INSERT_HEAD(&child_config_list_head, cc, cc_ent);
-}
-
-static struct child_config *
-child_config_find_by_name(const char *n)
-{
-	struct child_config	*cc;
-
-	cc = LIST_FIRST(&child_config_list_head);
-	while (cc) {
-		if (!strcmp(n, cc->cc_name))
-			return cc;
-		cc = LIST_NEXT(cc, cc_ent);
-	}
-	return NULL;
-}
-
-static void
-child_config_remove(struct child_config *cc)
-{
-	LIST_REMOVE(cc, cc_ent);
+	free(c);
 }
 
 static void
@@ -196,10 +169,13 @@ process_find(pid_t pid)
 	struct process	*p;
 
 	p = LIST_FIRST(&process_list_head);
-	while (p != NULL && p->p_pid != pid)
+	while (p != NULL) {
+		if (p->p_pid == pid)
+			return p;
 		p = LIST_NEXT(p, p_ent);
+	}
 
-	return p;
+	return NULL;
 }
 
 static struct process *
@@ -226,19 +202,23 @@ static void
 slog(const char *fmt, ...)
 {
 	va_list		ap;
-	char		time_buf[64];
+	char		time_buf[64],
+			msg[512];
+	int		msg_len;
+	size_t		ts_len;
 	struct tm	*t;
 	time_t		tt;
 
 	tt = time(NULL);
 	t = gmtime(&tt);
-	strftime(time_buf, sizeof(time_buf), "%b %d %T ", t);
-	fprintf(log_fd, "%s", time_buf);
+	ts_len = strftime(time_buf, sizeof(time_buf), "%b %d %T ", t);
+	fwrite(time_buf, ts_len, 1, log_fd);
 
 	va_start(ap, fmt);
-	vfprintf(log_fd, fmt, ap);
+	msg_len = vsnprintf(msg, sizeof(msg), fmt, ap);
 	va_end(ap);
-	fflush(log_fd);
+
+	fwrite(msg, msg_len, 1, log_fd);
 }
 
 static void
@@ -278,38 +258,11 @@ schedule_heartbeat(struct process *p)
 }
 
 /*
- * start process.
+ * set uid/gid if needed.
  */
-static int
-spawn(struct child_config *cc, int instance)
+static void
+spawn_child_setids(struct child_config *cc)
 {
-	pid_t		pid;
-
-	struct process	*p;
-
-	int		stdout_fd,
-			stderr_fd;
-
-	int		stdout_pipe[2];
-
-	slog("[spawn] %s (%d)\n", cc->cc_name, instance);
-
-	if ((pid = fork()) == -1) {
-		slog("[spawn] fork failed.\n");
-		return -1;
-	}
-
-	if (pid > 0) {
-		p = xmalloc(sizeof(struct process));
-		p->p_pid = pid;
-		p->p_child_config = cc;
-		p->p_instance = instance;
-		schedule_heartbeat(p);
-		process_insert(p);
-		return 1;
-	}
-
-	/* child */
 	if (cc->cc_gid != -1) {
 		if (setegid(cc->cc_gid) != 0)
 			exit(1);
@@ -333,39 +286,28 @@ spawn(struct child_config *cc, int instance)
 		if (setgid(0) != -1)
 			exit(1);
 	}
+}
+
+/*
+ * setup child process. we are already forked here.
+ */
+static void
+spawn_child(struct child_config *cc)
+{
+	int		stdout_fd,
+			stderr_fd;
+
+	spawn_child_setids(cc);
 
 	if (cc->cc_dir != NULL) {
 		if (chdir(cc->cc_dir) == -1)
 			exit(1);
 	}
-
 	close(0);
 	close(1);
 	close(2);
 
-	if (cc->cc_stdout_pipe != NULL) {
-		pid_t	pc;
-		char	*pargs[4];
-
-		pipe(stdout_pipe);
-		dup2(stdout_pipe[1], 1);
-
-		if ((pc = fork()) == -1) {
-			exit(1);
-		}
-
-		if (pc == 0) {
-			pargs[0] = cc->cc_stdout_pipe;
-			pargs[1] = cc->cc_name;
-			pargs[2] = cc->cc_stdout;
-			pargs[3] = NULL;
-			dup2(stdout_pipe[0], 0);
-			close(stdout_pipe[1]);
-			execv(pargs[0], pargs);
-			exit(EXIT_FAILURE);
-		}
-		close(stdout_pipe[0]);
-	} else if (cc->cc_stdout != NULL) {
+	if (cc->cc_stdout != NULL) {
 		if ((stdout_fd = open(cc->cc_stdout,
 				O_APPEND | O_CREAT | O_WRONLY,
 				S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)) == -1) {
@@ -388,6 +330,35 @@ spawn(struct child_config *cc, int instance)
 	setsid();
 	execv(cc->cc_command[0], cc->cc_command);
 	exit(EXIT_FAILURE);
+}
+
+/*
+ * start process.
+ */
+static int
+spawn(struct child_config *cc, int instance)
+{
+	pid_t		pid;
+
+	struct process	*p;
+
+	if((pid = fork()) == -1) {
+		return 0;
+	}
+
+	if (pid == 0) {
+		spawn_child(cc);
+		/* not reached */
+	}
+
+	p = xmalloc(sizeof(struct process));
+	p->p_pid = pid;
+	p->p_child_config = cc;
+	p->p_instance = instance;
+	schedule_heartbeat(p);
+	process_insert(p);
+
+	return 1;
 }
 
 /*
@@ -517,6 +488,10 @@ send_status_msg(struct client_con *con, int code, const char *msg)
 		slog("write failed in send_status_msg (len)\n");
 	}
 
+	if (bufferevent_write(con->c_be, &con->c_cid, sizeof(uint16_t)) == -1) {
+		slog("write failed in send_status_msg\n");
+	}
+
 	if (bufferevent_write(con->c_be, ret, ret_len) == -1) {
 		slog("write failed in send_status_msg\n");
 	}
@@ -561,6 +536,10 @@ c_list(struct client_con *con)
 	len = htons(ret_len);
 
 	if (bufferevent_write(con->c_be, &len, sizeof(uint16_t)) == -1) {
+		slog("write failed in send_status_msg\n");
+	}
+
+	if (bufferevent_write(con->c_be, &con->c_cid, sizeof(uint16_t)) == -1) {
 		slog("write failed in send_status_msg\n");
 	}
 
@@ -689,14 +668,6 @@ c_updt(struct client_con *con, char *buf)
 		if (up->cc_fatal_cb)
 			free(up->cc_fatal_cb);
 		up->cc_fatal_cb = xstrdup(cc->cc_fatal_cb);
-	}
-
-	if (cc->cc_stdout_pipe != NULL) {
-		slog("[update] stdout_pipe \"%s\" -> \"%s\"\n", up->cc_stdout_pipe,
-				cc->cc_stdout_pipe);
-		if (up->cc_stdout_pipe)
-			free(up->cc_stdout_pipe);
-		up->cc_stdout_pipe = xstrdup(cc->cc_stdout_pipe);
 	}
 
 	if (cc->cc_stdout != NULL) {
@@ -855,26 +826,31 @@ c_kill(struct client_con *con, char *buf)
 	}
 
 	if (!json_object_is_type(obj, json_type_object)) {
+		json_object_put(obj);
 		send_status_msg(con, 0, "failure");
 		return 0;
 	}
 
 	if ((m = json_object_object_get(obj, "name")) == NULL) {
+		json_object_put(obj);
 		send_status_msg(con, 0, "failure");
 		return 1;
 	}
 
 	if (!json_object_is_type(m, json_type_string)) {
+		json_object_put(obj);
 		send_status_msg(con, 0, "failure");
 		return 1;
 	}
 
 	if ((n = json_object_get_string(m)) == NULL) {
+		json_object_put(obj);
 		send_status_msg(con, 0, "failure");
 		return 1;
 	}
 
 	if ((cc = child_config_find_by_name(n)) == NULL) {
+		json_object_put(obj);
 		send_status_msg(con, 0, "name not found");
 		return 1;
 	}
@@ -912,6 +888,10 @@ c_kill(struct client_con *con, char *buf)
 	json_object_put(obj);
 
 	if (bufferevent_write(con->c_be, &len, sizeof(uint16_t)) == -1) {
+		slog("write failed in send_status_msg\n");
+	}
+
+	if (bufferevent_write(con->c_be, &con->c_cid, sizeof(uint16_t)) == -1) {
 		slog("write failed in send_status_msg\n");
 	}
 
@@ -1019,9 +999,14 @@ c_dele(struct client_con *con, char *buf)
 		slog("write failed in send_status_msg\n");
 	}
 
+	if (bufferevent_write(con->c_be, &con->c_cid, sizeof(uint16_t)) == -1) {
+		slog("write failed in send_status_msg\n");
+	}
+
 	if (bufferevent_write(con->c_be, ret, ret_len) == -1) {
 		slog("write failed in kill\n");
 	}
+
 	free(ret);
 	return 1;
 }
@@ -1091,6 +1076,10 @@ c_getc(struct client_con *con, char *buf)
 		slog("write failed in send_status_msg\n");
 	}
 
+	if (bufferevent_write(con->c_be, &con->c_cid, sizeof(uint16_t)) == -1) {
+		slog("write failed in send_status_msg\n");
+	}
+
 	if (bufferevent_write(con->c_be, ret, ret_len) == -1) {
 		slog("write failed in getc\n");
 	}
@@ -1148,12 +1137,13 @@ static void
 read_cb(struct bufferevent *b, void *cx)
 {
 	char			buf[BUFFER_SIZ];
-	uint16_t		len;
+	uint16_t		len,
+				cid;
 	size_t			r;
 	struct client_con	*c = cx;
 
 
-	if (c->c_len == 0) {
+	if (c->c_len == 0 && c->c_cid == 0) {
 		if (bufferevent_read(b, &len, 2) != 2) {
 			slog("read len failed.\n");
 			drop_client_connection(c);
@@ -1168,10 +1158,20 @@ read_cb(struct bufferevent *b, void *cx)
 		}
 
 		c->c_len = len;
+		bufferevent_setwatermark(b, EV_READ, 2, BUFFER_SIZ);
+	}
+
+	if(c->c_len > 0 && c->c_cid == 0) {
+		if (bufferevent_read(b, &cid, 2) != 2) {
+			slog("read cid failed.\n");
+			drop_client_connection(c);
+			return;
+		}
+		c->c_cid = cid;
 		bufferevent_setwatermark(b, EV_READ, c->c_len, BUFFER_SIZ);
 	}
 
-	if (c->c_len > 0) {
+	if (c->c_len > 0 && c->c_cid != 0) {
 		if (EVBUFFER_LENGTH(b->input) < c->c_len)
 			return;
 
@@ -1185,6 +1185,8 @@ read_cb(struct bufferevent *b, void *cx)
 		c->c_len = 0;
 		buf[r] = '\0';
 		run_server_command(buf, c);
+		c->c_cid = 0;
+		return;
 	}
 }
 
@@ -1220,6 +1222,7 @@ accept_cb(int fd, short evtype, void *unused __attribute__((unused)))
 	c = xmalloc(sizeof (struct client_con));
 	c->c_sock = s;
 	c->c_len = 0;
+	c->c_cid = 0;
 
 	if ((c->c_be = bufferevent_new(s, read_cb, NULL, error_cb, c)) == NULL) {
 		free(c);
@@ -1246,7 +1249,7 @@ accept_cb(int fd, short evtype, void *unused __attribute__((unused)))
 		return;
 	}
 
-	bufferevent_setwatermark(c->c_be, EV_READ, 2, BUFFER_SIZ);
+	bufferevent_setwatermark(c->c_be, EV_READ, 4, BUFFER_SIZ);
 	LIST_INSERT_HEAD(&client_con_list_head, c, c_ent);
 }
 

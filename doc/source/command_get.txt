@@ -25,7 +25,6 @@ Options
 -i, --instances  print number of instances.
 -k, --killsig    print signal used to kill processes.
 -o, --stdout     print standard output log file name.
--p, --pipe       print pipe command.
 -s, --status     print status.
 -u, --uid        print user id processes are started with.
 

@@ -53,8 +53,7 @@ struct child_config {
 					*cc_stderr,
 					*cc_dir,
 					*cc_heartbeat,
-					*cc_fatal_cb,
-					*cc_stdout_pipe;
+					*cc_fatal_cb;
 
 	int				cc_instances,
 					cc_status,
@@ -69,10 +68,17 @@ struct child_config {
 	time_t				cc_errtime;
 };
 
+LIST_HEAD(child_config_list, child_config);
+
+extern struct child_config_list		child_config_list_head;
+
 char *child_config_serialize(const struct child_config *);
 struct child_config *child_config_unserialize(const char *);
 struct child_config *child_config_from_json(json_object *);
 void child_config_free(struct child_config *);
 struct child_config *child_config_new(void);
+void child_config_insert(struct child_config *);
+struct child_config *child_config_find_by_name(const char *);
+void child_config_remove(struct child_config *);
 
 #endif /* __CHILD_CONFIG_H */

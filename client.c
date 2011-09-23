@@ -50,9 +50,16 @@ int read_reply(int sock, char *buf, size_t buf_siz)
 {
 	int		r;
 	uint16_t	len,
+			channel,
 			off = 0;
 
 	if ((r = read(sock, &len, 2)) < 0)
+		die("read");
+
+	if (r < 2)
+		return -1;
+
+	if ((r = read(sock, &channel, 2)) < 0)
 		die("read");
 
 	if (r < 2)
@@ -211,13 +218,16 @@ sock_write_len(int sock, unsigned short len)
 int
 sock_send_command(int sock, const char *cmd, const char *pl)
 {
-	uint16_t	len = 0;
+	uint16_t	len = 0,
+			channel = ntohs(1);
 
 	len = strlen(cmd);
 
 	if (pl)
 		len += strlen(pl);
 	if (sock_write_len(sock, len) == -1)
+		return -1;
+	if (sock_write_len(sock, channel) == -1)
 		return -1;
 	if (sock_write(sock, cmd) == -1)
 		return -1;
@@ -238,6 +248,10 @@ sock_send_helo(void)
 	if ((s = sock_connect()) == -1)
 		return -1;
 	if (sock_write_len(s, 4) == -1) {
+		close(s);
+		return -1;
+	}
+	if (sock_write_len(s, 1) == -1) {
 		close(s);
 		return -1;
 	}
@@ -453,6 +467,7 @@ cmd_delete(int argc, char **argv)
 	json_object_put(n);
 
 	if (ret == 0) {
+		fprintf(stderr, "failed\n");
 		close(sock);
 		return 1;
 	}

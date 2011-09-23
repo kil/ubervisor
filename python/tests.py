@@ -32,7 +32,7 @@
 import sys
 from ubervisor import *
 from unittest import TestCase, TestLoader, TextTestRunner
-from os import stat, unlink, path
+from os import stat, unlink, path, environ
 from time import sleep
 from tempfile import mkdtemp
 
@@ -48,7 +48,8 @@ def _sleep_monkey(fun):
 
 class BaseTest(TestCase):
     def setUp(self):
-        self.c = UbervisorClient()
+        self.c = UbervisorClient(host = environ.get("TEST_HOST", None),
+                command = [environ.get("UBERVISOR_PATH", ""), 'proxy'])
         self.c._delete = self.c.delete
         self.c.update = _sleep_monkey(self.c.update)
         self.c.start = _sleep_monkey(self.c.start)
@@ -121,7 +122,7 @@ class TestStartCommand(BaseTest):
         self.assertEqual(len(r), 1)
         stat(path.join(self.tmpdir, self.reltmpfile))
 
-    # pipe, heardbeat, fatal tested in TestInt
+    # heardbeat, fatal tested in TestInt
 
 
 class TestDeleteCommand(BaseTest):
@@ -181,11 +182,6 @@ class TestGetCommand(BaseTest):
         self.c.start('test', ['/bin/sleep', '1'], fatal_cb = '/bin/echo')
         r = self.c.get('test')
         self.assertEqual(r['fatal_cb'], '/bin/echo')
-
-    def test_get_stdout_pipe(self):
-        self.c.start('test', ['/bin/sleep', '1'], stdout_pipe = '/bin/cat')
-        r = self.c.get('test')
-        self.assertEqual(r['stdout_pipe'], '/bin/cat')
 
     def test_get_heartbeat_not_set(self):
         self.c.start('test', ['/bin/sleep', '1'])
@@ -316,12 +312,6 @@ class TestUpdateCommand(BaseTest):
         r = self.c.get('test')
         self.assertEqual(r['fatal_cb'], '/bin/echo')
 
-    def test_stdout_pipe(self):
-        self.c.start('test', ['/bin/sleep', '1'])
-        self.c.update('test', stdout_pipe = '/bin/cat')
-        r = self.c.get('test')
-        self.assertEqual(r['stdout_pipe'], '/bin/cat')
-
     def test_heartbeat(self):
         self.c.start('test', ['/bin/sleep', '1'])
         self.c.update('test', heartbeat = '/bin/echo')
@@ -374,18 +364,6 @@ class TestInt(BaseTest):
         for x in range(0, 3):
             stat('/tmp/test-%d' % x)
             unlink('/tmp/test-%d' % x)
-
-    def test_call_stdout_pipe(self):
-        cmd = path.join(path.dirname(path.abspath(__file__)), 'pipe_test.sh')
-        self.c.start('test', ['/bin/sleep', '10.0'], stdout_pipe = cmd,
-                stdout = self.tmpfile)
-        r = self.c.get('test')
-        self.assertEqual(r['stdout_pipe'], cmd)
-        self.assertEqual(r['stdout'], self.tmpfile)
-        stat('/tmp/pipe_test')
-        unlink('/tmp/pipe_test')
-        stat(self.tmpfile)
-        unlink(self.tmpfile)
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:

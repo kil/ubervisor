@@ -29,10 +29,9 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-import sys
 from socket import socket, socketpair, AF_UNIX, SOCK_STREAM
 from json import dumps, loads
-from os import geteuid, fork, dup2, close, execv
+from os import geteuid, fork, dup2, close, execv, kill, waitpid
 from struct import pack, unpack
 from pwd import getpwuid
 
@@ -40,14 +39,60 @@ STATUS_RUNNING = 1
 STATUS_STOPPED = 2
 STATUS_BROKEN = 3
 
+UBERVISOR_CMD = '/usr/local/bin/ubervisor'
+
 class UbervisorClientException(Exception):
     pass
+
+class SSHSock(object):
+    def sshconnect(self):
+        ps, cs = socketpair(AF_UNIX, SOCK_STREAM, 0)
+        p = fork()
+        if p == -1:
+            raise Exception("Fork failed")
+        if p == 0:
+            ps.close()
+            f = cs.fileno()
+            close(0)
+            close(1)
+            dup2(f, 0)
+            dup2(f, 1)
+            cl = self.sshcmd + self.command
+            execv(cl[0], cl)
+            exit(1)
+        else:
+            cs.close()
+            return p, ps
+
+    def __init__(self, host, command, sshcmd = None):
+        if sshcmd == None:
+            sshcmd = ['/usr/bin/ssh', '-T', '-a', '-x']
+        self.pid = 0
+        self.sock = None
+        self.sshcmd, self.command = sshcmd + [host], command
+
+    def connect(self):
+        self.pid, self.sock = self.sshconnect()
+        return self.sock
+
+    def close(self):
+        if self.sock:
+            self.sock.close()
+            self.sock = None
+        if self.pid > 0:
+            kill(self.pid, 15)
+            self.pid = 0
+            waitpid(self.pid, 0)
+
+    def __getattr__(self, x):
+        return getattr(self.sock, x)
 
 class UbervisorClient(object):
     _SOCK_FILE = '%s/.uber/socket'
 
     def _send(self, d, p = ''):
-        self.s.send(pack('!H', len(d) + len(p)))
+        self.cid += 1
+        self.s.send(pack('!HH', len(d) + len(p), self.cid))
         self.s.send(d)
         if p != '':
             self.s.send(p)
@@ -56,7 +101,13 @@ class UbervisorClient(object):
         b = self.s.recv(2)
         if len(b) != 2:
             raise UbervisorClientException('reply error')
+        c = self.s.recv(2)
+        if len(c) != 2:
+            raise UbervisorClientException('reply error')
         l = unpack('!H', b)[0]
+        cid = unpack('!H', c)[0]
+        if cid != self.cid:
+            raise UbervisorClientException("cid don't match")
         x = self.s.recv(l)
         try:
             return loads(x)
@@ -69,42 +120,36 @@ class UbervisorClient(object):
 
     def connect(self):
         """Open connection to server."""
+        self.cid = 1
         if not self.sock_cmd:
             self.s = socket(AF_UNIX, SOCK_STREAM)
             self.s.connect(self.sock_file)
         else:
-            ps, cs = socketpair(AF_UNIX, SOCK_STREAM, 0)
-            p = fork()
-            if p == 0:
-                ps.close()
-                f = cs.fileno()
-                close(0)
-                close(1)
-                dup2(f, 0)
-                dup2(f, 1)
-                cl = ['/bin/sh', '-c', self.sock_cmd]
-                execv(cl[0], cl)
-                sys.exit(0)
-            else:
-                cs.close()
-                self.s = ps
+            self.s = SSHSock(self.host, self.sock_cmd)
+            self.s.connect()
+
         self._send('HELO')
         if self.s.recv(4) != 'HELO':
             raise UbervisorClientException("HELO failed")
 
-    def __init__(self, sock_file = None, command = None):
+    def __init__(self, sock_file = None, host = None, command = [UBERVISOR_CMD,
+        'proxy']):
         """
         Create new client and connect to server. If neither ``sock_file`` nor
         ``command`` are specified, the default socket (``~/.uber/socket``) is
         connected to.
 
         :param str sock_file:       path to socket file to connect.
+        :param str host:            host ubervisor server is running on. If set,
+                                    use ssh with ``command`` to connect the
+                                    server.
         :param str command:         command to execute and whos stdin and stdout
                                     are use as the socket (equivalent to
                                     ``UBERVISOR_RSH`` environment variable of
                                     ubervisor).
         """
-        if not command:
+        self.host = host
+        if not host:
             self.sock_file = sock_file or self._SOCK_FILE % getpwuid(geteuid())[5]
             self.sock_cmd = None
         else:

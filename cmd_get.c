@@ -36,7 +36,7 @@
 #include "misc.h"
 #include "child_config.h"
 
-static char get_opts[] = "dDefghHikopsu";
+static char get_opts[] = "dDefghHikosu";
 
 static struct option get_longopts[] = {
 	{ "dir",	no_argument,		NULL,	'd' },
@@ -49,7 +49,6 @@ static struct option get_longopts[] = {
 	{ "instances",	no_argument,		NULL,	'i' },
 	{ "killsig",	no_argument,		NULL,	'k' },
 	{ "stdout",	no_argument,		NULL,	'o' },
-	{ "pipe",	no_argument,		NULL,	'p' },
 	{ "status",	no_argument,		NULL,	's' },
 	{ "uid",	no_argument,		NULL,	'u' },
 	{ NULL,		0,			NULL,	0 }
@@ -71,7 +70,6 @@ help_get(void)
 	printf("\t-i, --instances  print number of instances.\n");
 	printf("\t-k, --killsig    print signal used to kill processes.\n");
 	printf("\t-o, --stdout     print stdout.\n");
-	printf("\t-p, --pipe       print pipe command.\n");
 	printf("\t-s, --status     print status.\n");
 	printf("\t-u, --uid        print uid processes are started with.\n");
 	printf("\n");
@@ -93,8 +91,7 @@ cmd_get(int argc, char **argv)
 				get_instances = 0,
 				get_killsig = 0,
 				get_heartbeat = 0,
-				get_fatal = 0,
-				get_pipe = 0;
+				get_fatal = 0;
 
 	char			*msg;
 
@@ -137,9 +134,6 @@ cmd_get(int argc, char **argv)
 			break;
 		case 'o':
 			get_stdout = 1;
-			break;
-		case 'p':
-			get_pipe = 1;
 			break;
 		case 's':
 			get_status = 1;
@@ -231,7 +225,6 @@ cmd_get(int argc, char **argv)
 	GETSTR("stdout", get_stdout);
 	GETSTR("stderr", get_stderr);
 	GETSTR("dir", get_dir);
-	GETSTR("stdout_pipe", get_pipe);
 	GETSTR("heartbeat", get_heartbeat);
 	GETSTR("fatal_cb", get_fatal);
 	GETINT("uid", get_uid);
