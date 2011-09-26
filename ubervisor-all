@@ -1,0 +1,12 @@
+#!/bin/sh
+if [ -x ./ubervisor ]; then
+	UBER=./ubervisor
+else
+	UBER=`which ubervisor`
+fi
+
+GROUPS=$($UBER list)
+for x in $GROUPS; do
+	echo $x $($UBER $@ $x)
+done
+
