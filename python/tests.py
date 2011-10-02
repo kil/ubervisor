@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright (c) 2011, Whitematter Labs GmBH
+# Copyright (c) 2011, Whitematter Labs GmbH
 # All rights reserved.
 #
 # Copyright (c) 2011 Kilian Klimek <kilian.klimek@googlemail.com>
@@ -47,9 +47,12 @@ def _sleep_monkey(fun):
     return f
 
 class BaseTest(TestCase):
-    def setUp(self):
-        self.c = UbervisorClient(host = environ.get("TEST_HOST", None),
+    def get_client(self):
+        return UbervisorClient(host = environ.get("TEST_HOST", None),
                 command = [environ.get("UBERVISOR_PATH", ""), 'proxy'])
+
+    def setUp(self):
+        self.c = self.get_client()
         self.c._delete = self.c.delete
         self.c.update = _sleep_monkey(self.c.update)
         self.c.start = _sleep_monkey(self.c.start)
@@ -261,6 +264,9 @@ class TestInput2(BaseTest):
     def test_in_t14(self):
         self._send_garbage("LIST")
 
+    def test_in_t15(self):
+        self._send_garbage("SUBS")
+
 
 class TestUpdateCommand(BaseTest):
     def test_instances_increase(self):
@@ -364,6 +370,71 @@ class TestInt(BaseTest):
         for x in range(0, 3):
             stat('/tmp/test-%d' % x)
             unlink('/tmp/test-%d' % x)
+
+class TestAsync(BaseTest):
+    def test_start_stop(self):
+        cmd = ['/bin/sleep', '1']
+        cids = []
+
+        cids.append(self.c.start('t1', cmd, wait = False))
+        cids.append(self.c.delete('t1', wait = False))
+
+        for x in range(0, 2):
+            r, msg = self.c.wait()
+            self.assertEqual(True, r in cids)
+            cids.remove(r)
+        self.assertEqual(cids, [])
+
+    def test_subs(self):
+        cmd = ['/bin/sleep', '1']
+        cids = []
+        msgs = []
+        c = self.c.subs()
+        cids.append(self.c.start('t1', cmd, wait = False))
+        cids.append(self.c.delete('t1', wait = False))
+
+        while cids != []:
+            r, msg = self.c.wait()
+            self.assertEqual(True, r in cids or r == c)
+            if r == c:
+                msgs.append(msg)
+            else:
+                cids.remove(r)
+        self.assertEqual(cids, [])
+        self.assertNotEqual(msgs, [])
+
+    def test_start_stop_many(self):
+        cmd = ['/bin/sleep', '1']
+        cids = []
+
+        for x in range(0, 3):
+            cids.append(self.c.start('t1', cmd, wait = False))
+            cids.append(self.c.delete('t1', wait = False))
+
+        for x in range(0, 6):
+            r, msg = self.c.wait()
+            self.assertEqual(True, r in cids)
+            cids.remove(r)
+        self.assertEqual(cids, [])
+
+    def test_subs_other(self):
+        cmd = ['/bin/sleep', '1']
+        cids = []
+
+        c2 = self.get_client()
+        c = c2.subs()
+
+        cids.append(self.c.start('t1', cmd, wait = False))
+        cids.append(self.c.delete('t1', wait = False))
+
+        for x in range(0, 2):
+            r, msg = self.c.wait()
+            self.assertEqual(True, r in cids)
+            cids.remove(r)
+        self.assertEqual(cids, [])
+        cid, msg = c2.wait()
+        self.assertEqual(cid, c)
+        c2.close()
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:

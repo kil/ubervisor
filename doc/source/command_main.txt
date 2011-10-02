@@ -24,6 +24,7 @@ Commands
 * *proxy*         multiplex stdin/out to socket.
 * *server*        start the server
 * *start*         start a program
+* *subs*          subscribe to notifications.
 * *update*        modify a group
 
 

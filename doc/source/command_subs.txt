@@ -1,0 +1,20 @@
+==============
+ubervisor-subs
+==============
+
+Synopsis
+========
+
+``ubervisor`` *subs* *ident*
+
+Description
+===========
+
+Subscribe to server notifications. At the moment, the only supported value
+for *ident* is ``1``.
+
+See Also
+========
+:manpage:`ubervisor(1)`
+
+.. vim:spell:ft=rst

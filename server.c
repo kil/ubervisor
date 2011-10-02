@@ -54,6 +54,7 @@
 #include "child_config.h"
 #include "misc.h"
 #include "paths.h"
+#include "subscription.h"
 
 #ifdef HAVE_SYS_QUEUE_H
 #include <sys/queue.h>
@@ -110,6 +111,8 @@ static int c_dump(struct client_con *);
  */
 #define HEARTBEAT_SEC	5
 
+#define LOG_TS_FORMAT	"%b %d %T"
+
 static char		server_opts[] = "ac:d:fhlo:s";
 
 static struct option	server_longopts[] = {
@@ -153,6 +156,7 @@ drop_client_connection(struct client_con *c)
 {
 	bufferevent_free(c->c_be);
 	close(c->c_sock);
+	subscription_remove_for_client(c);
 	LIST_REMOVE(c, c_ent);
 	free(c);
 }
@@ -199,26 +203,76 @@ process_remove(struct process *p)
 }
 
 static void
+send_notification(int n, const char *msg)
+{
+	struct subscription	*s;
+	uint16_t		len;
+
+	char			*ret;
+	int			ret_len;
+
+	json_object		*obj,
+				*c;
+
+	if ((obj = json_object_new_object()) == NULL)
+		return;
+
+	if ((c = json_object_new_string(msg)) == NULL)
+		return;
+
+	json_object_object_add(obj, "msg", c);
+
+	ret = xstrdup(json_object_to_json_string(obj));
+	ret_len = strlen(ret);
+	len = htons(ret_len);
+
+	json_object_put(obj);
+
+	s = LIST_FIRST(&subscription_list_head);
+	while (s != NULL) {
+		if ((s->s_ident & n) != 0) {
+			do {
+				if (bufferevent_write(s->s_client->c_be,
+							&len,
+							sizeof(uint16_t)) == -1)
+					break;
+				if (bufferevent_write(s->s_client->c_be,
+							&s->s_channel,
+							sizeof(uint16_t)) == -1)
+					break;
+				bufferevent_write(s->s_client->c_be, ret, ret_len);
+			} while(0);
+		}
+		s = LIST_NEXT(s, s_ent);
+	}
+
+	free(ret);
+}
+
+static void
 slog(const char *fmt, ...)
 {
 	va_list		ap;
-	char		time_buf[64],
-			msg[512];
-	int		msg_len;
-	size_t		ts_len;
+	char		ts_buf[64],
+			msg_buf[64],
+			out[128];
+	int		out_len;
 	struct tm	*t;
 	time_t		tt;
 
 	tt = time(NULL);
 	t = gmtime(&tt);
-	ts_len = strftime(time_buf, sizeof(time_buf), "%b %d %T ", t);
-	fwrite(time_buf, ts_len, 1, log_fd);
+	strftime(ts_buf, sizeof(ts_buf), LOG_TS_FORMAT, t);
 
 	va_start(ap, fmt);
-	msg_len = vsnprintf(msg, sizeof(msg), fmt, ap);
+	vsnprintf(msg_buf, sizeof(msg_buf), fmt, ap);
 	va_end(ap);
 
-	fwrite(msg, msg_len, 1, log_fd);
+	out_len = snprintf(out, sizeof(out), "%s -- %s", ts_buf, msg_buf);
+	if (out_len < 0)
+		return;
+	fwrite(out, out_len, 1, log_fd);
+	send_notification(SUBS_SERVER, out);
 }
 
 static void
@@ -235,7 +289,7 @@ run_fatal_cb(struct child_config *cc)
 		return;
 	}
 
-	slog("running fatal_cb %s ...\n", cc->cc_fatal_cb);
+	slog("running fatal_cb \"%s\" for %s ...\n", cc->cc_fatal_cb, cc->cc_name);
 	if (pid == 0) {
 		args[0] = cc->cc_fatal_cb;
 		args[1] = cc->cc_name;
@@ -357,7 +411,7 @@ spawn(struct child_config *cc, int instance)
 	p->p_instance = instance;
 	schedule_heartbeat(p);
 	process_insert(p);
-
+	slog("[process_start] %s pid: %d\n", cc->cc_name, pid);
 	return 1;
 }
 
@@ -395,7 +449,7 @@ heartbeat_cb(int unused0 __attribute__((unused)),
 	pid = fork();
 
 	if (pid == -1) {
-		slog("heartbeat spawn error.\n");
+		slog("heartbeat spawn error in group %s.\n", cc->cc_name);
 		return;
 	}
 
@@ -424,15 +478,21 @@ signal_cb(int unused0 __attribute__((unused)),
 	struct process		*p;
 	struct child_config	*cc;
 	time_t			t;
-
+	char			*cc_name;
 
 	while ((pid = waitpid(-1, &ret, WNOHANG)) > 0) {
 		if ((p = process_find(pid)) == NULL)
 			return;
 
 		cc = p->p_child_config;
+
+		if (cc)
+			cc_name = cc->cc_name;
+		else
+			cc_name = NULL;
+
 		inst = p->p_instance;
-		slog("[exit] pid: %d\n", pid);
+		slog("[process_exit] %s pid: %d\n", cc_name, pid);
 		process_remove(p);
 		evtimer_del(&(p->p_heartbeat_timer));
 		free(p);
@@ -513,7 +573,6 @@ c_list(struct client_con *con)
 	ssize_t			ret_len;
 
 
-	slog("[list]\n");
 	if ((obj = json_object_new_array()) == NULL) {
 		send_status_msg(con, 0, "failed");
 		return 1;
@@ -560,7 +619,6 @@ c_spwn(struct client_con *con, char *buf)
 	int			i;
 	struct child_config	*cc;
 
-	slog("[start]\n");
 	if ((cc = child_config_unserialize(buf)) == NULL) {
 		send_status_msg(con, 0, "failure");
 		return 0;
@@ -590,6 +648,7 @@ c_spwn(struct client_con *con, char *buf)
 	else
 		c_dump(con);
 
+	slog("[start] creating group %s\n", cc->cc_name);
 	if (cc->cc_status != STATUS_RUNNING)
 		return 1;
 
@@ -608,7 +667,6 @@ c_updt(struct client_con *con, char *buf)
 	struct child_config	*cc,
 				*up;
 
-	slog("[update]\n");
 	if ((cc = child_config_unserialize(buf)) == NULL) {
 		slog("[update] parse error\n");
 		send_status_msg(con, 0, "failure");
@@ -732,8 +790,6 @@ c_updt(struct client_con *con, char *buf)
 static int
 c_exit(struct client_con *con)
 {
-	slog("[exit]\n");
-
 	if (!allow_exit) {
 		send_status_msg(con, 0, "prohibited");
 		return 1;
@@ -776,8 +832,6 @@ c_dump(struct client_con *con)
 		return 1;
 	}
 
-	slog("[dump]\n");
-
 	fprintf(fo, "[\n");
 	LIST_FOREACH (i, &child_config_list_head, cc_ent) {
 		if ((ptr = child_config_serialize(i)) == NULL)
@@ -814,7 +868,6 @@ c_kill(struct client_con *con, char *buf)
 
 	int			sig;
 
-	slog("[kill]\n");
 	if ((obj = json_tokener_parse(buf)) == NULL) {
 		send_status_msg(con, 0, "failure");
 		return 0;
@@ -856,6 +909,7 @@ c_kill(struct client_con *con, char *buf)
 	}
 
 	sig = cc->cc_killsig;
+	slog("[kill] %s signal %d\n", cc->cc_name, sig);
 
 	if ((m = json_object_object_get(obj, "sig")) != NULL) {
 		if (json_object_is_type(m, json_type_int))
@@ -923,7 +977,6 @@ c_dele(struct client_con *con, char *buf)
 				*p;
 
 
-	slog("[dele]\n");
 	if ((obj = json_tokener_parse(buf)) == NULL) {
 		send_status_msg(con, 0, "failure");
 		return 0;
@@ -963,6 +1016,7 @@ c_dele(struct client_con *con, char *buf)
 	}
 
 	child_config_remove(cc);
+	slog("[dele] %s\n", cc->cc_name);
 
 	/* construct reply */
 	if ((obj = json_object_new_object()) == NULL)
@@ -1029,7 +1083,6 @@ c_getc(struct client_con *con, char *buf)
 				*m;
 
 
-	slog("[getc]\n");
 	if ((obj = json_tokener_parse(buf)) == NULL) {
 		send_status_msg(con, 0, "failure");
 		return 0;
@@ -1088,6 +1141,55 @@ c_getc(struct client_con *con, char *buf)
 }
 
 /*
+ * channel subscription command handler.
+ */
+static int
+c_subs(struct client_con *con, char *buf)
+{
+	json_object		*obj,
+				*m;
+
+	int			ident;
+	struct subscription	*subs;
+
+
+	if ((obj = json_tokener_parse(buf)) == NULL) {
+		send_status_msg(con, 0, "failure");
+		return 0;
+	}
+
+	if (is_error(obj)) {
+		send_status_msg(con, 0, "failure");
+		return 0;
+	}
+
+	if (!json_object_is_type(obj, json_type_object)) {
+		send_status_msg(con, 0, "failure");
+		return 0;
+	}
+
+	if ((m = json_object_object_get(obj, "ident")) == NULL) {
+		send_status_msg(con, 0, "failure");
+		return 0;
+	}
+
+	if (!json_object_is_type(m, json_type_int)) {
+		send_status_msg(con, 0, "failure");
+		return 0;
+	}
+
+	ident = json_object_get_int(m);
+
+	subs = xmalloc(sizeof(struct subscription));
+	subs->s_client = con;
+	subs->s_ident = ident;
+	subs->s_channel = con->c_cid;
+	subscription_insert(&subscription_list_head, subs);
+	send_status_msg(con, 1, "success");
+	return 1;
+}
+
+/*
  */
 static void
 run_server_command(char *buf, struct client_con *c)
@@ -1127,6 +1229,8 @@ run_server_command(char *buf, struct client_con *c)
 		cr = c_updt(c, cmd_buf);
 	else if (!strncmp(buf, "GETC", 4))
 		cr = c_getc(c, cmd_buf);
+	else if (!strncmp(buf, "SUBS", 4))
+		cr = c_subs(c, cmd_buf);
 	if (!cr)
 		drop_client_connection(c);
 }
@@ -1153,6 +1257,7 @@ read_cb(struct bufferevent *b, void *cx)
 		len = ntohs(len);
 
 		if (len > BUFFER_SIZ) {
+			slog("command payload too large.\n");
 			drop_client_connection(c);
 			return;
 		}
@@ -1194,7 +1299,6 @@ static void
 error_cb(struct bufferevent *b __attribute__((unused)), short what __attribute__((unused)), void *cx)
 {
 	struct client_con	*c = cx;
-	slog("dropping client\n");
 	drop_client_connection(c);
 }
 

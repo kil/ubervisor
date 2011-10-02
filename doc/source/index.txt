@@ -17,6 +17,7 @@ Contents:
    command_list
    command_server
    command_start
+   command_subs
    command_update
 
 Indices and tables

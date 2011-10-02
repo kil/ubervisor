@@ -35,6 +35,7 @@
 #include "cmd_update.h"
 #include "cmd_get.h"
 #include "cmd_proxy.h"
+#include "cmd_subscribe.h"
 
 #ifdef DEBUG
 #define DEBUG_VERSION	"-debug"
@@ -110,6 +111,8 @@ main(int argc, char **argv)
 		ret = cmd_list(argc, argv);
 	} else if (!strcmp(cmd, "proxy")) {
 		ret = cmd_proxy(argc, argv);
+	} else if (!strcmp(cmd, "subs")) {
+		ret = cmd_subscribe(argc, argv);
 	} else {
 		help();
 	}

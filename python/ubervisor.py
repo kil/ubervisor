@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright (c) 2011, Wihtematter Labs GmBH
+# Copyright (c) 2011, Whitematter Labs GmbH
 # All rights reserved.
 #
 # Copyright (c) 2011 Kilian Klimek <kilian.klimek@googlemail.com>
@@ -92,27 +92,25 @@ class UbervisorClient(object):
 
     def _send(self, d, p = ''):
         self.cid += 1
-        self.s.send(pack('!HH', len(d) + len(p), self.cid))
-        self.s.send(d)
-        if p != '':
-            self.s.send(p)
+        self.s.sendall(pack('!HH', len(d) + len(p), self.cid) + d + p)
+        return self.cid
 
-    def _reply(self):
-        b = self.s.recv(2)
-        if len(b) != 2:
+    def wait(self):
+        b = self.s.recv(4)
+        if len(b) != 4:
             raise UbervisorClientException('reply error')
-        c = self.s.recv(2)
-        if len(c) != 2:
-            raise UbervisorClientException('reply error')
-        l = unpack('!H', b)[0]
-        cid = unpack('!H', c)[0]
-        if cid != self.cid:
-            raise UbervisorClientException("cid don't match")
+        l, cid = unpack('!HH', b)
         x = self.s.recv(l)
         try:
-            return loads(x)
+            return cid, loads(x)
         except ValueError:
-            raise UbervisorClientException('json error')
+            raise UbervisorClientException('json error: \"%s\"' % x)
+
+    def _reply(self, exp_cid):
+        cid, d = self.wait()
+        if cid != exp_cid:
+            raise UbervisorClientException("cid don't match")
+        return d
 
     def close(self):
         """Close connection to server."""
@@ -159,7 +157,7 @@ class UbervisorClient(object):
 
     def start(self, name, args, dir = None, stdout = None, stderr = None,
             instances = 1, status = STATUS_RUNNING, killsig = 15, uid = -1,
-            gid = -1, heartbeat = None, fatal_cb = None, stdout_pipe = None):
+            gid = -1, heartbeat = None, fatal_cb = None, wait = True):
         """
         Create a new process group and start it.
 
@@ -173,8 +171,7 @@ class UbervisorClient(object):
         :param int uid:         user id to run program as.
         :param int gid:         group id to run program as.
         :param str fatal_cb:    command to run on error conditions.
-        :param str stdout_pipe: pipe standard output of processes spawned in
-                                this group to stdin of ``stdout_pipe``.
+        :param bool wait:       if ``True``, wait for server reply.
         """
         d = dict(name = name, args = args,
             stderr = stderr, instances = instances, status = status,
@@ -187,93 +184,113 @@ class UbervisorClient(object):
             d['heartbeat'] = heartbeat
         if fatal_cb:
             d['fatal_cb'] = fatal_cb
-        if stdout_pipe:
-            d['stdout_pipe'] = stdout_pipe
 
         d = dumps(d)
-        self._send('SPWN', d)
-        r = self._reply()
+        c = self._send('SPWN', d)
+        if not wait:
+            return c
+        r = self._reply(c)
         if r['code'] != True:
             raise UbervisorClientException(r['msg'])
         return self
 
-    def delete(self, name):
+    def delete(self, name, wait = True):
         """
         Delete process group, identified by *name*
 
         :param str name:        name of process group to delete.
         :returns:               list of pids still alive in this process group.
+        :param bool wait:       if ``True``, wait for server reply.
         """
         d = dumps(dict(name = name))
-        self._send('DELE', d)
-        r = self._reply()
+        x = self._send('DELE', d)
+        if not wait:
+            return x
+        r = self._reply(x)
         if r['code'] != True:
             raise UbervisorClientException(r['msg'])
         return r['pids']
 
-    def kill(self, name, sig = None):
+    def kill(self, name, sig = None, wait = True):
         """
         Kill processes in group *name*. By default, the killsig used in start
         command is uned (which itself defaults to 15).
 
         :param str name:        name of group the signal shall be send to.
         :param int sig:         signal to deliver.
+        :param bool wait:       if ``True``, wait for server reply.
         :returns:               list of pids that got a signal send.
         """
         d = dumps(dict(name = name))
         if sig:
             d['sig'] = int(sig)
-        self._send('KILL', d)
-        r = self._reply()
+        x = self._send('KILL', d)
+        if not wait:
+            return x
+        r = self._reply(x)
         if r['code'] != True:
             raise UbervisorClientException(r['msg'])
         return r['pids']
 
-    def get(self, name):
+    def get(self, name, wait = True):
         """
         Get config for *name*.
 
+        :param bool wait:       if ``True``, wait for server reply.
         :returns:               config dictionary.
         """
         d = dumps(dict(name = name))
-        self._send('GETC', d)
-        r = self._reply()
+        x = self._send('GETC', d)
+        if not wait:
+            return x
+        r = self._reply(x)
         if r.get('code', None) == False:
             raise UbervisorClientException(r['msg'])
         return r
 
-    def list(self):
+    def list(self, wait = True):
         """
         List groups
 
+        :param bool wait:       if ``True``, wait for server reply.
         :returns:               list of group names.
         """
-        self._send('LIST')
-        return self._reply()
+        x = self._send('LIST')
+        if not wait:
+            return x
+        return self._reply(x)
 
-    def exit(self):
+    def exit(self, wait = True):
         """
         Send exit command to ubervisor.
+
+        :param bool wait:       if ``True``, wait for server reply.
         """
-        self._send('EXIT')
-        r = self._reply()
+        x = self._send('EXIT')
+        if not wait:
+            return x
+        r = self._reply(x)
         if r['code'] != True:
             raise UbervisorClientException(r['msg'])
         return self
 
-    def dump(self):
+    def dump(self, wait = True):
         """
         Send ubervisor command to dump the current configuration to a file.
+
+        :param bool wait:       if ``True``, wait for server reply.
         """
-        self._send('DUMP')
-        r = self._reply()
+        x = self._send('DUMP')
+        if not wait:
+            return x
+        r = self._reply(x)
         if r['code'] != True:
             raise UbervisorClientException(r['msg'])
         return self
 
     def update(self, name, stdout = None, stderr = None,
             instances = None, status = None, killsig = None,
-            heartbeat = None, fatal_cb = None, stdout_pipe = None):
+            heartbeat = None, fatal_cb = None, wait = True):
         """
         Create a new process group and start it.
 
@@ -287,6 +304,7 @@ class UbervisorClient(object):
         :param str fatal_cb:    command to run on error conditions.
         :param str stdout_pipe: pipe standard output into standard input of
                                 ``stdout_pipe``.
+        :param bool wait:       if ``True``, wait for server reply.
         """
         d = dict(name = name)
         if stdout:
@@ -303,11 +321,24 @@ class UbervisorClient(object):
             d['heartbeat'] = heartbeat
         if fatal_cb:
             d['fatal_cb'] = fatal_cb
-        if stdout_pipe:
-            d['stdout_pipe'] = stdout_pipe
         d = dumps(d)
-        self._send('UPDT', d)
-        r = self._reply()
+        x = self._send('UPDT', d)
+        if not wait:
+            return x
+        r = self._reply(x)
         if r['code'] != True:
             raise UbervisorClientException(r['msg'])
         return self
+
+    def subs(self, ident = 1, wait = True):
+        """
+        Subscribe to server events.
+        """
+        d = dumps(dict(ident = ident))
+        x = self._send('SUBS', d)
+        if not wait:
+            return x
+        r = self._reply(x)
+        if r['code'] != True:
+            raise UbervisorClientException(r['msg'])
+        return x
