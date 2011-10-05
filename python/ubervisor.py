@@ -45,7 +45,11 @@ class UbervisorClientException(Exception):
     pass
 
 class SSHSock(object):
-    def sshconnect(self):
+    """
+    Ubervisor ssh transport. This provides a socket-like object to communicate
+    with an ubervisor server.
+    """
+    def _sshconnect(self):
         ps, cs = socketpair(AF_UNIX, SOCK_STREAM, 0)
         p = fork()
         if p == -1:
@@ -65,6 +69,13 @@ class SSHSock(object):
             return p, ps
 
     def __init__(self, host, command, sshcmd = None):
+        """
+        Create new SSHSock.
+
+        :param str host:        host to connect to.
+        :param list command:    command to execute on ``host``.
+        :param list sshcmd:     ssh command.
+        """
         if sshcmd == None:
             sshcmd = ['/usr/bin/ssh', '-T', '-a', '-x']
         self.pid = 0
@@ -72,22 +83,31 @@ class SSHSock(object):
         self.sshcmd, self.command = sshcmd + [host], command
 
     def connect(self):
-        self.pid, self.sock = self.sshconnect()
+        """
+        Open ssh connection.
+        """
+        self.pid, self.sock = self._sshconnect()
         return self.sock
 
     def close(self):
+        """
+        Close ssh connection. This closes the socket and kills the ssh child.
+        """
         if self.sock:
             self.sock.close()
             self.sock = None
         if self.pid > 0:
             kill(self.pid, 15)
-            self.pid = 0
             waitpid(self.pid, 0)
+            self.pid = 0
 
     def __getattr__(self, x):
         return getattr(self.sock, x)
 
 class UbervisorClient(object):
+    """
+    Client for ubervisor server.
+    """
     _SOCK_FILE = '%s/.uber/socket'
 
     def _send(self, d, p = ''):
@@ -95,7 +115,18 @@ class UbervisorClient(object):
         self.s.sendall(pack('!HH', len(d) + len(p), self.cid) + d + p)
         return self.cid
 
+    def _reply(self, exp_cid):
+        cid, d = self.wait()
+        if cid != exp_cid:
+            raise UbervisorClientException("cid don't match")
+        return d
+
     def wait(self):
+        """
+        Wait for command reply from server.
+
+        :returns: ``(cid, payload)`` tuple.
+        """
         b = self.s.recv(4)
         if len(b) != 4:
             raise UbervisorClientException('reply error')
@@ -105,12 +136,6 @@ class UbervisorClient(object):
             return cid, loads(x)
         except ValueError:
             raise UbervisorClientException('json error: \"%s\"' % x)
-
-    def _reply(self, exp_cid):
-        cid, d = self.wait()
-        if cid != exp_cid:
-            raise UbervisorClientException("cid don't match")
-        return d
 
     def close(self):
         """Close connection to server."""

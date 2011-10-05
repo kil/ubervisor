@@ -150,7 +150,7 @@ cmd_get(int argc, char **argv)
 	argv += optind;
 	argc -= optind;
 
-	if(argc != 1)
+	if (argc != 1)
 		help_get();
 
 	obj = json_object_new_object();
@@ -198,7 +198,7 @@ cmd_get(int argc, char **argv)
 		return 1;
 	}
 
-#define GETSTR(X,Y)	if(Y) { \
+#define GETSTR(X,Y)	if (Y) { \
 				if ((n = json_object_object_get(obj, X)) == NULL) { \
 					fprintf(stderr, "failed.\n"); \
 					return 1; \
@@ -210,7 +210,7 @@ cmd_get(int argc, char **argv)
 				printf("%s\n", json_object_get_string(n)); \
 			}
 
-#define GETINT(X,Y)	if(Y) { \
+#define GETINT(X,Y)	if (Y) { \
 				if ((n = json_object_object_get(obj, X)) == NULL) { \
 					fprintf(stderr, "failed.\n"); \
 					return 1; \

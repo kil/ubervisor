@@ -36,6 +36,9 @@
 
 struct child_config_list		child_config_list_head;
 
+/*
+ * Serialize child_config struct to string. Returned buffer must be freed.
+ */
 char *
 child_config_serialize(const struct child_config *cc)
 {
@@ -148,6 +151,9 @@ struct child_config *child_config_from_json(json_object *obj)
 
 }
 
+/*
+ * Load child_config from json string.
+ */
 struct child_config *child_config_unserialize(const char *buf)
 {
 	json_object		*obj;
@@ -161,6 +167,9 @@ struct child_config *child_config_unserialize(const char *buf)
 	return child_config_from_json(obj);
 }
 
+/*
+ * free child_config.
+ */
 void
 child_config_free(struct child_config *cc)
 {
@@ -184,6 +193,10 @@ child_config_free(struct child_config *cc)
 	free(cc);
 }
 
+/*
+ * Allocate new child_config struct and set defaults. -1 is used as the
+ * "unset" value on numbers.
+ */
 struct child_config *child_config_new(void)
 {
 	struct child_config	*cc;
@@ -198,12 +211,18 @@ struct child_config *child_config_new(void)
 	return cc;
 }
 
+/*
+ * Insert child_config into global list.
+ */
 void
 child_config_insert(struct child_config *cc)
 {
 	LIST_INSERT_HEAD(&child_config_list_head, cc, cc_ent);
 }
 
+/*
+ * Find by group name.
+ */
 struct child_config *
 child_config_find_by_name(const char *n)
 {
@@ -218,6 +237,9 @@ child_config_find_by_name(const char *n)
 	return NULL;
 }
 
+/*
+ * Remove (not free) from list
+ */
 void
 child_config_remove(struct child_config *cc)
 {

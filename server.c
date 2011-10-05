@@ -202,6 +202,9 @@ process_remove(struct process *p)
 	LIST_REMOVE(p, p_ent);
 }
 
+/*
+ * send notification message to subscribed clients.
+ */
 static void
 send_notification(int n, const char *msg)
 {
@@ -241,7 +244,7 @@ send_notification(int n, const char *msg)
 							sizeof(uint16_t)) == -1)
 					break;
 				bufferevent_write(s->s_client->c_be, ret, ret_len);
-			} while(0);
+			} while (0);
 		}
 		s = LIST_NEXT(s, s_ent);
 	}
@@ -249,6 +252,10 @@ send_notification(int n, const char *msg)
 	free(ret);
 }
 
+/*
+ * write message to server log and send message to clients subscribed to
+ * server messages.
+ */
 static void
 slog(const char *fmt, ...)
 {
@@ -275,6 +282,9 @@ slog(const char *fmt, ...)
 	send_notification(SUBS_SERVER, out);
 }
 
+/*
+ * run fatal callback command for a group.
+ */
 static void
 run_fatal_cb(struct child_config *cc)
 {
@@ -396,7 +406,7 @@ spawn(struct child_config *cc, int instance)
 
 	struct process	*p;
 
-	if((pid = fork()) == -1) {
+	if ((pid = fork()) == -1) {
 		return 0;
 	}
 
@@ -465,7 +475,21 @@ heartbeat_cb(int unused0 __attribute__((unused)),
 }
 
 /*
- * signal handler
+ * Return 1 if the exit conditon should be considered an error.
+ */
+static int
+exit_is_error(int ret, struct child_config *cc)
+{
+	if ((WIFEXITED(ret) && WEXITSTATUS(ret) != 0)
+			|| (WIFSIGNALED(ret)
+			&& WTERMSIG(ret) == cc->cc_killsig)) {
+		return 1;
+	}
+	return 0;
+}
+
+/*
+ * libevent signal handler.
  */
 static void
 signal_cb(int unused0 __attribute__((unused)),
@@ -497,9 +521,7 @@ signal_cb(int unused0 __attribute__((unused)),
 		evtimer_del(&(p->p_heartbeat_timer));
 		free(p);
 		if (cc) {
-			if ((WIFEXITED(ret) && WEXITSTATUS(ret) != 0)
-					|| (WIFSIGNALED(ret)
-					&& WTERMSIG(ret) == cc->cc_killsig)) {
+			if (exit_is_error(ret, cc)) {
 				t = time(NULL);
 				if (cc->cc_errtime + ERROR_PERIOD < t)
 					cc->cc_error = 0;
@@ -795,7 +817,11 @@ c_exit(struct client_con *con)
 		return 1;
 	}
 
-	send_status_msg(con, 1, "exiting");
+	if (!auto_dump)
+		send_status_msg(con, 1, "exiting");
+	else
+		c_dump(con);
+	slog("server exiting due to exit command.\n");
 	exit(0);
 	return 1;
 }
@@ -809,7 +835,8 @@ c_dump(struct client_con *con)
 	static int		cnt = 0;
 	struct child_config	*i;
 	FILE			*fo;
-	char 			fname[PATH_MAX];
+	char 			fname[PATH_MAX],
+				fname_tmp[PATH_MAX];
 	int			r;
 	char			*ptr;
 	char			time_buf[64];
@@ -820,27 +847,58 @@ c_dump(struct client_con *con)
 	t = gmtime(&tt);
 	strftime(time_buf, sizeof(time_buf), "%b_%d_%H_%M_%S", t);
 
-	r = snprintf(fname, PATH_MAX, DUMP_PATH, cnt++,
+	cnt++;
+
+	r = snprintf(fname, PATH_MAX, DUMP_PATH, cnt,
 			geteuid(), time_buf);
 	if (r < 0 || r >= PATH_MAX) {
 		send_status_msg(con, 0, "failure");
 		return 1;
 	}
 
-	if ((fo = fopen(fname, "w")) == NULL) {
+	r = snprintf(fname_tmp, PATH_MAX, "tmp." DUMP_PATH, cnt,
+			geteuid(), time_buf);
+	if (r < 0 || r >= PATH_MAX) {
+		send_status_msg(con, 0, "failure");
+		return 1;
+	}
+
+	if ((fo = fopen(fname_tmp, "w")) == NULL) {
 		send_status_msg(con, 0, "failure");
 		return 1;
 	}
 
 	fprintf(fo, "[\n");
 	LIST_FOREACH (i, &child_config_list_head, cc_ent) {
-		if ((ptr = child_config_serialize(i)) == NULL)
+		if ((ptr = child_config_serialize(i)) == NULL) {
+			fclose(fo);
+			send_status_msg(con, 0, "failure");
 			return 1;
-		fprintf(fo, "%s,\n", ptr);
+		}
+
+		if (fprintf(fo, "%s,\n", ptr) < 0) {
+			fclose(fo);
+			send_status_msg(con, 0, "failure");
+			free(ptr);
+			return 1;
+		}
+
 		free(ptr);
 	}
-	fprintf(fo, "]\n");
+
+	if (fprintf(fo, "]\n") < 0) {
+		fclose(fo);
+		send_status_msg(con, 0, "failure");
+	}
+
 	fclose(fo);
+
+	if (link(fname_tmp, fname) == -1) {
+		send_status_msg(con, 0, "failure.");
+		return 1;
+	}
+
+	unlink(fname_tmp);
 	send_status_msg(con, 1, "dump successful.");
 	return 1;
 }
@@ -1190,6 +1248,7 @@ c_subs(struct client_con *con, char *buf)
 }
 
 /*
+ * Execute command.
  */
 static void
 run_server_command(char *buf, struct client_con *c)
@@ -1236,6 +1295,7 @@ run_server_command(char *buf, struct client_con *c)
 }
 
 /*
+ * libevent read callback.
  */
 static void
 read_cb(struct bufferevent *b, void *cx)
@@ -1247,8 +1307,10 @@ read_cb(struct bufferevent *b, void *cx)
 	struct client_con	*c = cx;
 
 
+	/* read command len */
 	if (c->c_len == 0 && c->c_cid == 0) {
-		if (bufferevent_read(b, &len, 2) != 2) {
+		if (bufferevent_read(b, &len, sizeof(uint16_t))
+				!= sizeof(uint16_t)) {
 			slog("read len failed.\n");
 			drop_client_connection(c);
 			return;
@@ -1262,12 +1324,21 @@ read_cb(struct bufferevent *b, void *cx)
 			return;
 		}
 
+		if (len < 4) {
+			slog("command payload too small.\n");
+			drop_client_connection(c);
+			return;
+		}
+
 		c->c_len = len;
-		bufferevent_setwatermark(b, EV_READ, 2, BUFFER_SIZ);
+		bufferevent_setwatermark(b, EV_READ, sizeof(uint16_t),
+				BUFFER_SIZ);
 	}
 
-	if(c->c_len > 0 && c->c_cid == 0) {
-		if (bufferevent_read(b, &cid, 2) != 2) {
+	/* read command cid */
+	if (c->c_len > 0 && c->c_cid == 0) {
+		if (bufferevent_read(b, &cid, sizeof(uint16_t))
+				!= sizeof(uint16_t)) {
 			slog("read cid failed.\n");
 			drop_client_connection(c);
 			return;
@@ -1276,6 +1347,7 @@ read_cb(struct bufferevent *b, void *cx)
 		bufferevent_setwatermark(b, EV_READ, c->c_len, BUFFER_SIZ);
 	}
 
+	/* read command name and payload */
 	if (c->c_len > 0 && c->c_cid != 0) {
 		if (EVBUFFER_LENGTH(b->input) < c->c_len)
 			return;
@@ -1286,7 +1358,8 @@ read_cb(struct bufferevent *b, void *cx)
 			return;
 		}
 
-		bufferevent_setwatermark(c->c_be, EV_READ, 2, BUFFER_SIZ);
+		bufferevent_setwatermark(c->c_be, EV_READ, sizeof(uint16_t),
+				BUFFER_SIZ);
 		c->c_len = 0;
 		buf[r] = '\0';
 		run_server_command(buf, c);
@@ -1295,8 +1368,12 @@ read_cb(struct bufferevent *b, void *cx)
 	}
 }
 
+/*
+ * libevent error callback.
+ */
 static void
-error_cb(struct bufferevent *b __attribute__((unused)), short what __attribute__((unused)), void *cx)
+error_cb(struct bufferevent *b __attribute__((unused)),
+		short what __attribute__((unused)), void *cx)
 {
 	struct client_con	*c = cx;
 	drop_client_connection(c);
@@ -1317,7 +1394,7 @@ accept_cb(int fd, short evtype, void *unused __attribute__((unused)))
 
 	if ((s = accept(fd, NULL, 0)) == -1) {
 		if (errno != EWOULDBLOCK && errno != EAGAIN)
-			slog("Failed to accept a connection\n");
+			slog("Failed to accept a connection.\n");
 		return;
 	}
 
@@ -1636,6 +1713,7 @@ cmd_server(int argc, char **argv)
 	if (logfile != NULL && do_fork) {
 		if ((log_fd = fopen(logfile, "a")) == NULL)
 			die("fopen");
+		setvbuf(log_fd, NULL, _IOLBF, 0);
 		r = fileno(log_fd);
 		setcloseonexec(r);
 	}
@@ -1648,6 +1726,7 @@ cmd_server(int argc, char **argv)
 	event_set(&se, SIGCHLD, EV_SIGNAL | EV_PERSIST, signal_cb, NULL);
 	event_add(&se, NULL);
 
+	slog("server started.\n");
 	event_dispatch();
 	return EXIT_SUCCESS;
 }

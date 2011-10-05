@@ -95,7 +95,7 @@ cmd_subscribe(int argc, char **argv)
 	argv += optind;
 	argc -= optind;
 
-	if(argc != 1)
+	if (argc != 1)
 		help_subscribe();
 
 	ident = strtol(argv[0], NULL, 10);
