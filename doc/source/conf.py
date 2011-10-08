@@ -38,5 +38,6 @@ man_pages = [
     ('command_list',   'ubervisor-list',   u'Ubervisor list command',   [u'Kilian Klimek'], 1),
     ('command_server', 'ubervisor-server', u'Ubervisor server command', [u'Kilian Klimek'], 1),
     ('command_update', 'ubervisor-update', u'Ubervisor update command', [u'Kilian Klimek'], 1),
+    ('command_all',    'ubervisor-all',    u'Ubervisor-all',            [u'Kilian Klimek'], 1),
 ]
 

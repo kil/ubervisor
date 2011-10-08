@@ -51,11 +51,18 @@ const char		*_malloc_options = "J";
 
 char			*program_name;
 
+
+static void
+print_version(void)
+{
+	printf("ubervisor-" VERSION " by " AUTHOR "\n");
+}
+
 static void
 help(void)
 {
 	printf("\n");
-	printf("ubervisor-" VERSION " by " AUTHOR "\n");
+	print_version();
 	printf("\n");
 	printf("Usage: %s <command> [args]\n", program_name);
 	printf("\n");
@@ -113,6 +120,8 @@ main(int argc, char **argv)
 		ret = cmd_proxy(argc, argv);
 	} else if (!strcmp(cmd, "subs")) {
 		ret = cmd_subscribe(argc, argv);
+	} else if (!strcmp(cmd, "-v") || !strcmp(cmd, "-V")) {
+		print_version();
 	} else {
 		help();
 	}

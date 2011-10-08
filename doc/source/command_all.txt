@@ -1,0 +1,19 @@
+=============
+ubervisor-all
+=============
+
+Synopsis
+========
+
+``ubervisor-all`` *command* ``[arguments ...]``
+
+Description
+===========
+
+Send *command* to all groups.
+
+See Also
+========
+:manpage:`ubervisor-start(1)` :manpage:`ubervisor-update(1)` :manpage:`ubervisor-list(1)`
+
+.. vim:spell:ft=rst

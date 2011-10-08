@@ -19,6 +19,7 @@ Contents:
    command_start
    command_subs
    command_update
+   command_all
 
 Indices and tables
 ==================
