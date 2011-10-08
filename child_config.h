@@ -42,6 +42,7 @@
 #define STATUS_RUNNING	1
 #define STATUS_STOPPED	2
 #define STATUS_BROKEN	3
+#define STATUS_MAX	3
 
 struct child_config {
 	LIST_ENTRY(child_config)	cc_ent;
@@ -80,5 +81,6 @@ struct child_config *child_config_new(void);
 void child_config_insert(struct child_config *);
 struct child_config *child_config_find_by_name(const char *);
 void child_config_remove(struct child_config *);
+int child_config_status_from_string(const char *);
 
 #endif /* __CHILD_CONFIG_H */

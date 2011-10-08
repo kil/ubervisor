@@ -73,8 +73,8 @@ help_start(void)
 	printf("\t-u, --uid UID         UID to start processes as (not set).\n");
 	printf("\n");
 	printf("Status codes:\n");
-	printf("\t1:\t running\n");
-	printf("\t2:\t stopped\n");
+	printf("\t1 or start:           running\n");
+	printf("\t2 or stop:            stopped\n");
 	printf("\n");
 	printf("Examples:\n");
 	printf("\tuber start -o /tmp/stdout sleeper /bin/sleep 4\n");
@@ -135,7 +135,11 @@ cmd_start(int argc, char **argv)
 			cc->cc_stdout = optarg;
 			break;
 		case 's':
-			cc->cc_status = strtol(optarg, NULL, 10);
+			cc->cc_status = child_config_status_from_string(optarg);
+			if (cc->cc_status == -1) {
+				fprintf(stderr, "Illegal status code\n");
+				exit(1);
+			}
 			break;
 		case 'u':
 			cc->cc_uid = strtol(optarg, NULL, 10);

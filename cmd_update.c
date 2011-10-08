@@ -115,7 +115,11 @@ cmd_update(int argc, char **argv)
 			cc->cc_stdout = optarg;
 			break;
 		case 's':
-			cc->cc_status = strtol(optarg, NULL, 10);
+			cc->cc_status = child_config_status_from_string(optarg);
+			if (cc->cc_status == -1) {
+				fprintf(stderr, "Illegal status code\n");
+				exit(1);
+			}
 			break;
 		default:
 			help_update();

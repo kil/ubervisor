@@ -49,10 +49,11 @@ Options
 Status Codes
 ============
 
-- ``1`` the running state. Processes are restarted, when they exit.
-- ``2`` means stopped. No new processes are started.
-- ``3`` is the fatal state. Due to too many unexpected exits in a too short
-  interval, processes are not started again.
+- ``1`` or ``start`` the running state. Processes are restarted, when they exit.
+- ``2`` or ``stop``  means stopped. No new processes are started.
+- ``3`` or ``fatal`` is the fatal, or *forced stop*, state. The ubervisor
+  server sets this on process groups if too many processes exiting with an exit
+  code other then ``0`` in a too short interval. No new processes are started.
 
 Heartbeat command
 =================

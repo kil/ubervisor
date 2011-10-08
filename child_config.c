@@ -28,6 +28,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <errno.h>
 
 #include <json/json.h>
 
@@ -244,4 +245,27 @@ void
 child_config_remove(struct child_config *cc)
 {
 	LIST_REMOVE(cc, cc_ent);
+}
+
+/*
+ * convert str to status code.
+ */
+int
+child_config_status_from_string(const char *str)
+{
+	int	ret;
+
+	if (!strncmp(str, "start", 5))
+		return STATUS_RUNNING;
+	else if (!strncmp(str, "stop", 4))
+		return STATUS_STOPPED;
+	else if (!strncmp(str, "fatal", 5))
+		return STATUS_BROKEN;
+
+	ret = strtol(str, NULL, 10);
+	if (errno == EINVAL)
+		return -1;
+	if (ret > STATUS_MAX)
+		return -1;
+	return ret;
 }
