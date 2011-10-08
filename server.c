@@ -353,14 +353,41 @@ spawn_child_setids(struct child_config *cc)
 }
 
 /*
+ * Inplace substring replace. Only handling the cases where strlen(b) <=
+ * strlen(a) - which is fine for the purpose this is used for: replacing
+ * the instance number in log files.
+ */
+static void
+replace_str(char *in, const char *a, const char *b)
+{
+	char		*in_ptr;
+	size_t		a_len,
+			b_len,
+			in_len;
+
+	if ((in_ptr = strstr(in, a)) == NULL)
+		return;
+
+	a_len = strlen(a);
+	b_len = strlen(b);
+	if (b_len > a_len)
+		return;
+	in_len = strlen(in);
+	memcpy(in_ptr, b, b_len);
+	memmove(in_ptr + b_len, in_ptr + a_len, in_len - b_len);
+}
+
+/*
  * setup child process. we are already forked here.
  */
 static void
-spawn_child(struct child_config *cc)
+spawn_child(struct child_config *cc, int instance)
 {
 	int		stdout_fd,
 			stderr_fd;
+	char		instance_str[5];
 
+	snprintf(instance_str, sizeof(instance_str), "%d", instance);
 	spawn_child_setids(cc);
 
 	if (cc->cc_dir != NULL) {
@@ -372,6 +399,7 @@ spawn_child(struct child_config *cc)
 	close(2);
 
 	if (cc->cc_stdout != NULL) {
+		replace_str(cc->cc_stdout, "%(NUM)", instance_str);
 		if ((stdout_fd = open(cc->cc_stdout,
 				O_APPEND | O_CREAT | O_WRONLY,
 				S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)) == -1) {
@@ -382,6 +410,7 @@ spawn_child(struct child_config *cc)
 	}
 
 	if (cc->cc_stderr != NULL) {
+		replace_str(cc->cc_stderr, "%(NUM)", instance_str);
 		if ((stderr_fd = open(cc->cc_stderr,
 				O_APPEND | O_CREAT | O_WRONLY,
 				S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)) == -1) {
@@ -411,7 +440,7 @@ spawn(struct child_config *cc, int instance)
 	}
 
 	if (pid == 0) {
-		spawn_child(cc);
+		spawn_child(cc, instance);
 		/* not reached */
 	}
 

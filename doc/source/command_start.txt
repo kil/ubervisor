@@ -19,7 +19,10 @@ Options
 -d, --dir DIR                   change dir to ``DIR`` before starting child.
                                 The default is to not change directories.
 -e, --stderr FILE               log standard error for processes in this group
-                                to ``FILE``.
+                                to ``FILE``. If ``FILE`` contains the
+                                substring ``%(NUM)``, the substring will be
+                                replaced with the instance number assigned to a
+                                process.
 -f, --fatal COMMAND             ``COMMAND`` to run on fatal condition. See below.
 -H, --heartbeat COMMAND         run ``COMMAND`` every 5 seconds. See below.
 -g, --gid GID                   Set group id to ``GID`` for childs in this group.
@@ -33,7 +36,10 @@ Options
                                 Defaults to 15 (SIGTERM). This is used as the
                                 default signal when invoking the kill command.
 -o, --stdout FILE               log standard output for processes in this group
-                                to ``FILE``.
+                                to ``FILE``. If ``FILE`` contains the
+                                substring ``%(NUM)``, the substring will be
+                                replaced with the instance number assigned to a
+                                process.
 -s, --status STATUS             status to create group with. By default the
                                 running status (1) is used.
 -u, --uid UID                   ``UID`` to start processes as. The same
