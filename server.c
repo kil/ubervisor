@@ -55,6 +55,7 @@
 #include "misc.h"
 #include "paths.h"
 #include "subscription.h"
+#include "process.h"
 
 #ifdef HAVE_SYS_QUEUE_H
 #include <sys/queue.h>
@@ -65,15 +66,6 @@
 /*
  * types
  */
-struct process {
-	LIST_ENTRY(process)	p_ent;
-	pid_t			p_pid;
-	time_t			p_start;
-	struct child_config	*p_child_config;
-	int			p_instance;
-	struct event		p_heartbeat_timer;
-};
-
 struct client_con {
 	LIST_ENTRY(client_con)	c_ent;
 	int			c_sock;
@@ -85,7 +77,6 @@ struct client_con {
 /*
  * globals
  */
-static LIST_HEAD(process_list, process)			process_list_head;
 static LIST_HEAD(client_con_list, client_con)		client_con_list_head;
 
 static struct event_base	*evloop;
@@ -159,47 +150,6 @@ drop_client_connection(struct client_con *c)
 	subscription_remove_for_client(c);
 	LIST_REMOVE(c, c_ent);
 	free(c);
-}
-
-static void
-process_insert(struct process *p)
-{
-	LIST_INSERT_HEAD(&process_list_head, p, p_ent);
-}
-
-static struct process *
-process_find(pid_t pid)
-{
-	struct process	*p;
-
-	p = LIST_FIRST(&process_list_head);
-	while (p != NULL) {
-		if (p->p_pid == pid)
-			return p;
-		p = LIST_NEXT(p, p_ent);
-	}
-
-	return NULL;
-}
-
-static struct process *
-process_find_instance(struct child_config *cc, int i)
-{
-	struct process	*p;
-
-	p = LIST_FIRST(&process_list_head);
-	while (p != NULL) {
-		if (p->p_child_config == cc && p->p_instance == i)
-			return p;
-		p = LIST_NEXT(p, p_ent);
-	}
-	return NULL;
-}
-
-static void
-process_remove(struct process *p)
-{
-	LIST_REMOVE(p, p_ent);
 }
 
 /*
@@ -534,7 +484,7 @@ signal_cb(int unused0 __attribute__((unused)),
 	char			*cc_name;
 
 	while ((pid = waitpid(-1, &ret, WNOHANG)) > 0) {
-		if ((p = process_find(pid)) == NULL)
+		if ((p = process_find_by_pid(pid)) == NULL)
 			return;
 
 		cc = p->p_child_config;
