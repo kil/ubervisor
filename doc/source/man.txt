@@ -1,0 +1,11 @@
+*********
+Man Pages
+*********
+
+.. toctree::
+   :maxdepth: 1
+   :glob:
+
+   man/*
+
+.. vim:spell:ft=rst

@@ -8,18 +8,8 @@ Contents:
 
    overview
    tutorial
-   command_main
-   command_delete
-   command_dump
-   command_exit
-   command_get
-   command_kill
-   command_list
-   command_server
-   command_start
-   command_subs
-   command_update
-   command_all
+   man
+   client
 
 Indices and tables
 ==================

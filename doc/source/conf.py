@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 import sys, os
-#sys.path.insert(0, os.path.abspath('.'))
+sys.path.insert(0, os.path.abspath('../../python'))
 #needs_sphinx = '1.0'
 extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.viewcode']
 templates_path = ['_templates']
 source_suffix = '.txt'
 master_doc = 'index'
 project = u'Ubervisor'
-copyright = [u'2011, Kilian Klimek', u'2011, Whitematter Labs GmbH']
+copyright = u'2011, Kilian Klimek and Whitematter Labs GmbH'
 version = '0.0.1'
 release = '0.0.1'
 exclude_patterns = []
@@ -28,16 +28,16 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('command_main',   'ubervisor',        u'Ubervisor main reference', [u'Kilian Klimek'], 1),
-    ('command_start',  'ubervisor-start',  u'Ubervisor start command',  [u'Kilian Klimek'], 1),
-    ('command_exit',   'ubervisor-exit',   u'Ubervisor exit command',   [u'Kilian Klimek'], 1),
-    ('command_kill',   'ubervisor-kill',   u'Ubervisor kill command',   [u'Kilian Klimek'], 1),
-    ('command_delete', 'ubervisor-delete', u'Ubervisor delete command', [u'Kilian Klimek'], 1),
-    ('command_dump',   'ubervisor-dump',   u'Ubervisor dump command',   [u'Kilian Klimek'], 1),
-    ('command_get',    'ubervisor-get',    u'Ubervisor get command',    [u'Kilian Klimek'], 1),
-    ('command_list',   'ubervisor-list',   u'Ubervisor list command',   [u'Kilian Klimek'], 1),
-    ('command_server', 'ubervisor-server', u'Ubervisor server command', [u'Kilian Klimek'], 1),
-    ('command_update', 'ubervisor-update', u'Ubervisor update command', [u'Kilian Klimek'], 1),
-    ('command_all',    'ubervisor-all',    u'Ubervisor-all',            [u'Kilian Klimek'], 1),
+    ('man/command_main',   'ubervisor',        u'Ubervisor main reference', [u'Kilian Klimek'], 1),
+    ('man/command_start',  'ubervisor-start',  u'Ubervisor start command',  [u'Kilian Klimek'], 1),
+    ('man/command_exit',   'ubervisor-exit',   u'Ubervisor exit command',   [u'Kilian Klimek'], 1),
+    ('man/command_kill',   'ubervisor-kill',   u'Ubervisor kill command',   [u'Kilian Klimek'], 1),
+    ('man/command_delete', 'ubervisor-delete', u'Ubervisor delete command', [u'Kilian Klimek'], 1),
+    ('man/command_dump',   'ubervisor-dump',   u'Ubervisor dump command',   [u'Kilian Klimek'], 1),
+    ('man/command_get',    'ubervisor-get',    u'Ubervisor get command',    [u'Kilian Klimek'], 1),
+    ('man/command_list',   'ubervisor-list',   u'Ubervisor list command',   [u'Kilian Klimek'], 1),
+    ('man/command_server', 'ubervisor-server', u'Ubervisor server command', [u'Kilian Klimek'], 1),
+    ('man/command_update', 'ubervisor-update', u'Ubervisor update command', [u'Kilian Klimek'], 1),
+    ('man/command_all',    'ubervisor-all',    u'Ubervisor-all',            [u'Kilian Klimek'], 1),
 ]
 

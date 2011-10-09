@@ -1,0 +1,8 @@
+=============================
+Python Client Class Reference
+=============================
+
+.. automodule:: ubervisor
+   :members:
+
+.. vim:spell:ft=rst
