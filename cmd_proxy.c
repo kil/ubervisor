@@ -37,41 +37,43 @@
 #include "misc.h"
 #include "child_config.h"
 
-
-static int sock;
+struct bufferevent	*be_in,
+			*be_out,
+			*be_sock;
 
 static void
-proxy_cb(int s, short evtype, void *unused __attribute__((unused)))
+proxy_read_cb(struct bufferevent *b, void *unused __attribute__((unused)))
 {
-	int			r;
 	char			buf[BUFFER_SIZ];
+	size_t			r;
+	int			ret;
 
-	if ((evtype & EV_READ) == 0) {
+	r = bufferevent_read(b, buf, BUFFER_SIZ);
+
+	if (b == be_in)
+		ret = bufferevent_write(be_sock, buf, r);
+	else if (b == be_sock)
+		ret = bufferevent_write(be_out, buf, r);
+
+	if (ret == -1) {
+		fprintf(stderr, "Error\n");
 		exit(1);
 	}
+}
 
-	if ((r = read(s, buf, BUFFER_SIZ)) <= 0)
-		exit(1);
-
-	if (s == 0) {
-		if ((write(sock, buf, r)) != r) {
-			fprintf(stderr, "err ... \n");
-			exit(1);
-		}
-	} else {
-		if ((write(1, buf, r)) != r) {
-			fprintf(stderr, "err ... \n");
-			exit(1);
-		}
-	}
+static void
+proxy_error_cb(struct bufferevent *b __attribute__((unused)),
+		short what __attribute__((unused)),
+		void *cx __attribute__((unused)))
+{
+	exit(1);
 }
 
 int
 cmd_proxy(int argc, char **argv)
 {
 	struct event_base	*evloop;
-	struct event		ev_sock,
-				ev_in;
+	int			sock;
 
 	if (argc > 1) {
 		fprintf(stderr, "%s takes no options.\n", argv[0]);
@@ -89,11 +91,31 @@ cmd_proxy(int argc, char **argv)
 	setnonblock(sock);
 	setnonblock(0);
 
-	event_set(&ev_sock, sock, EV_READ | EV_PERSIST, proxy_cb, NULL);
-	event_add(&ev_sock, NULL);
+	if ((be_out = bufferevent_new(1, NULL, NULL,
+					proxy_error_cb, NULL)) == NULL)
+		die("bufferevent_new");
 
-	event_set(&ev_in, 0, EV_READ | EV_PERSIST, proxy_cb, NULL);
-	event_add(&ev_in, NULL);
+	if (bufferevent_enable(be_out, EV_WRITE))
+		die("bufferevent_enable");
+
+	if ((be_in = bufferevent_new(0, proxy_read_cb, NULL,
+					proxy_error_cb, NULL)) == NULL)
+		die("bufferevent_new");
+
+	if (bufferevent_enable(be_in, EV_READ))
+		die("bufferevent_enable");
+
+	bufferevent_setwatermark(be_in, EV_READ, 1, BUFFER_SIZ);
+
+	if ((be_sock = bufferevent_new(sock, proxy_read_cb, NULL,
+					proxy_error_cb, NULL)) == NULL)
+		die("bufferevent_new");
+
+	if (bufferevent_enable(be_sock, EV_READ))
+		die("bufferevent_enable");
+
+	bufferevent_setwatermark(be_sock, EV_READ, 1, BUFFER_SIZ);
+
 	event_dispatch();
 	return 0;
 }

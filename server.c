@@ -1019,7 +1019,6 @@ c_dele(struct client_con *con, char *buf)
 				*m,
 				*p;
 
-
 	if ((obj = json_tokener_parse(buf)) == NULL) {
 		send_status_msg(con, 0, "failure");
 		return 0;
@@ -1235,30 +1234,26 @@ c_subs(struct client_con *con, char *buf)
 /*
  * Execute command.
  */
-static void
+static int
 run_server_command(char *buf, struct client_con *c)
 {
 	int			cr = 0;
 	char			*cmd_buf;
 
-
 	/* alive check */
 	if (!strcmp(buf, "HELO")) {
 		if (bufferevent_write(c->c_be, "HELO", 4) == -1)
 			slog("HELO failed.\n");
-		return;
+		return 1;
 	}
 
 	/* commands without payload */
 	if (!strcmp(buf, "EXIT")) {
-		c_exit(c);
-		return;
+		return c_exit(c);
 	} else if (!strcmp(buf, "LIST")) {
-		c_list(c);
-		return;
+		return c_list(c);
 	} else if (!strcmp(buf, "DUMP")) {
-		c_dump(c);
-		return;
+		return c_dump(c);
 	}
 
 	cmd_buf = buf + 4;
@@ -1277,6 +1272,7 @@ run_server_command(char *buf, struct client_con *c)
 		cr = c_subs(c, cmd_buf);
 	if (!cr)
 		drop_client_connection(c);
+	return cr;
 }
 
 /*
@@ -1293,63 +1289,71 @@ read_cb(struct bufferevent *b, void *cx)
 
 
 	/* read command len */
-	if (c->c_len == 0 && c->c_cid == 0) {
-		if (bufferevent_read(b, &len, sizeof(uint16_t))
-				!= sizeof(uint16_t)) {
-			slog("read len failed.\n");
-			drop_client_connection(c);
-			return;
+	while (1) {
+		if (c->c_len == 0 && c->c_cid == 0) {
+			if (EVBUFFER_LENGTH(b->input) < 2)
+				return;
+
+			if (bufferevent_read(b, &len, sizeof(uint16_t))
+					!= sizeof(uint16_t)) {
+				slog("read len failed.\n");
+				drop_client_connection(c);
+				return;
+			}
+
+			len = ntohs(len);
+
+			if (len > BUFFER_SIZ) {
+				slog("command payload too large.\n");
+				drop_client_connection(c);
+				return;
+			}
+
+			if (len < 4) {
+				slog("command payload too small.\n");
+				drop_client_connection(c);
+				return;
+			}
+
+			c->c_len = len;
+			bufferevent_setwatermark(b, EV_READ, sizeof(uint16_t),
+					BUFFER_SIZ);
 		}
 
-		len = ntohs(len);
+		/* read command cid */
+		if (c->c_len > 0 && c->c_cid == 0) {
+			if (EVBUFFER_LENGTH(b->input) < 2)
+				return;
 
-		if (len > BUFFER_SIZ) {
-			slog("command payload too large.\n");
-			drop_client_connection(c);
-			return;
+			if (bufferevent_read(b, &cid, sizeof(uint16_t))
+					!= sizeof(uint16_t)) {
+				slog("read cid failed.\n");
+				drop_client_connection(c);
+				return;
+			}
+			c->c_cid = cid;
+			bufferevent_setwatermark(b, EV_READ, c->c_len, BUFFER_SIZ);
 		}
 
-		if (len < 4) {
-			slog("command payload too small.\n");
-			drop_client_connection(c);
-			return;
+		/* read command name and payload */
+		if (c->c_len > 0 && c->c_cid != 0) {
+			if (EVBUFFER_LENGTH(b->input) < c->c_len)
+				return;
+
+			if ((r = bufferevent_read(b, buf, c->c_len)) != c->c_len) {
+				slog("read payload failed.\n");
+				drop_client_connection(c);
+				return;
+			}
+
+			bufferevent_setwatermark(c->c_be, EV_READ, sizeof(uint16_t),
+					BUFFER_SIZ);
+			c->c_len = 0;
+			buf[r] = '\0';
+			if (!run_server_command(buf, c))
+				return;
+			c->c_cid = 0;
 		}
-
-		c->c_len = len;
-		bufferevent_setwatermark(b, EV_READ, sizeof(uint16_t),
-				BUFFER_SIZ);
-	}
-
-	/* read command cid */
-	if (c->c_len > 0 && c->c_cid == 0) {
-		if (bufferevent_read(b, &cid, sizeof(uint16_t))
-				!= sizeof(uint16_t)) {
-			slog("read cid failed.\n");
-			drop_client_connection(c);
-			return;
-		}
-		c->c_cid = cid;
-		bufferevent_setwatermark(b, EV_READ, c->c_len, BUFFER_SIZ);
-	}
-
-	/* read command name and payload */
-	if (c->c_len > 0 && c->c_cid != 0) {
-		if (EVBUFFER_LENGTH(b->input) < c->c_len)
-			return;
-
-		if ((r = bufferevent_read(b, buf, c->c_len)) != c->c_len) {
-			slog("read payload failed.\n");
-			drop_client_connection(c);
-			return;
-		}
-
-		bufferevent_setwatermark(c->c_be, EV_READ, sizeof(uint16_t),
-				BUFFER_SIZ);
-		c->c_len = 0;
-		buf[r] = '\0';
-		run_server_command(buf, c);
-		c->c_cid = 0;
-		return;
 	}
 }
 
