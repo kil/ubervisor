@@ -35,6 +35,7 @@ from unittest import TestCase, TestLoader, TextTestRunner
 from os import stat, unlink, path, environ
 from time import sleep
 from tempfile import mkdtemp
+from shutil import rmtree
 
 SEND_GARBAGE = True
 SLEEP_SEC = 0.02
@@ -79,6 +80,7 @@ class BaseTest(TestCase):
             self.c.close()
         except:
             pass
+        rmtree(self.tmpdir)
 
 class TestStartCommand(BaseTest):
     def test_start_normal(self):
