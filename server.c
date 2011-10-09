@@ -956,18 +956,24 @@ c_kill(struct client_con *con, char *buf)
 	json_object_put(obj);
 
 	/* construct reply */
-	obj = json_object_new_object();
+	if ((obj = json_object_new_object()) == NULL)
+		return 1;
 
-	c = json_object_new_boolean(1);
+	if ((c = json_object_new_boolean(1)) == NULL)
+		return 1;
+
 	json_object_object_add(obj, "code", c);
 
-	m = json_object_new_array();
+	if ((m = json_object_new_array()) == NULL)
+		return 1;
+
 	json_object_object_add(obj, "pids", m);
 
 	LIST_FOREACH(i, &process_list_head, p_ent) {
 		if (i->p_child_config == cc) {
 			kill(i->p_pid, sig);
-			p = json_object_new_int(i->p_pid);
+			if ((p = json_object_new_int(i->p_pid)) == NULL)
+				return 1;
 			json_object_array_add(m, p);
 		}
 	}
