@@ -18,4 +18,4 @@ Useful cmake flags
 Debugging
 ---------
 delete CMakeCache.txt (!) and run cmake with `-DUV_DEBUG:bool=true` and
-recomplile.
+recomplile. To do a clang --analyze build, use `-DCLANG_ANALYZE:bool=true`.
