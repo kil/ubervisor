@@ -52,7 +52,7 @@ proxy_read_cb(struct bufferevent *b, void *unused __attribute__((unused)))
 
 	if (b == be_in)
 		ret = bufferevent_write(be_sock, buf, r);
-	else if (b == be_sock)
+	else /* if (b == be_sock) */
 		ret = bufferevent_write(be_out, buf, r);
 
 	if (ret == -1) {

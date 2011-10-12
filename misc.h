@@ -32,7 +32,7 @@
 
 void *xmalloc(size_t);
 char *xstrdup(const char *);
-void die(const char *);
+void die(const char *) __attribute__ ((noreturn));
 int setnonblock(int);
 int setcloseonexec(int);
 
