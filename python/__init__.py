@@ -1,1 +1,1 @@
-from ubervisor import UbervisorClient
+from ubervisor import UbervisorClient, SSHSock
