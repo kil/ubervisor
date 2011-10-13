@@ -1483,6 +1483,14 @@ load_dump(char *fname)
 		if ((cc = child_config_from_json(t)) == NULL)
 			return 0;
 		slog("load: %s\n", cc->cc_name);
+		/* Set some defaults that we require to operate, if they are
+		 * not set already. */
+		if (cc->cc_killsig == -1)
+			cc->cc_killsig = SIGTERM;
+		if (cc->cc_instances == -1)
+			cc->cc_instances = 1;
+		if (cc->cc_status == -1)
+			cc->cc_status = STATUS_RUNNING;
 		child_config_insert(cc);
 		if (cc->cc_status == STATUS_RUNNING) {
 			for (j = 0; j < cc->cc_instances; j++)
