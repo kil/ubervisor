@@ -1536,6 +1536,7 @@ cmd_server(int argc, char **argv)
 				r;
 	pid_t			pid;
 	struct sigaction	sa;
+	FILE			*tmp_fd;
 
 
 	if ((pw = getpwuid(geteuid())) == NULL)
@@ -1673,6 +1674,20 @@ cmd_server(int argc, char **argv)
 	listen(fd, 8);
 	printf("socket: %s\n", sock_path_ptr);
 
+	/* check if we can open the logfile before we fork. */
+	if (logfile != NULL && do_fork) {
+		if ((tmp_fd = fopen(logfile, "a")) == NULL)
+			die("fopen");
+		fclose(tmp_fd);
+	}
+
+	/* check if we can open the dumpfile before we work. */
+	if (dump_file != NULL) {
+		if ((tmp_fd = fopen(dump_file, "r")) == NULL)
+			die("fopen");
+		fclose(tmp_fd);
+	}
+
 	if (do_fork) {
 		pid = fork();
 
@@ -1691,16 +1706,6 @@ cmd_server(int argc, char **argv)
 	if ((evloop = event_base_new()) == NULL)
 		die("event_base_new");
 
-	/* loading a dump will start the processes - must do this after
-	 * event_init */
-	if (dump_file) {
-		if (!load_dump(dump_file))
-			die("dump_file");
-	}
-
-	if (load_latest)
-		load_newest_dump();
-
 	if (logfile != NULL && do_fork) {
 		if ((log_fd = fopen(logfile, "a")) == NULL)
 			die("fopen");
@@ -1708,6 +1713,16 @@ cmd_server(int argc, char **argv)
 		r = fileno(log_fd);
 		setcloseonexec(r);
 	}
+
+	/* loading a dump will start the processes - must do this after
+	 * event_init */
+	if (dump_file != NULL) {
+		if (!load_dump(dump_file))
+			die("dump_file");
+	}
+
+	if (load_latest)
+		load_newest_dump();
 
 	setcloseonexec(fd);
 
