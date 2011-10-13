@@ -211,7 +211,7 @@ struct child_config *child_config_new(void)
 	cc = xmalloc (sizeof(struct child_config));
 	memset(cc, '\0', sizeof(struct child_config));
 	cc->cc_instances = -1;
-	cc->cc_status = 1;
+	cc->cc_status = -1;
 	cc->cc_killsig = -1;
 	cc->cc_uid = -1;
 	cc->cc_gid = -1;
