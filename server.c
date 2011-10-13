@@ -322,9 +322,9 @@ replace_str(char *in, const char *a, const char *b)
 	b_len = strlen(b);
 	if (b_len > a_len)
 		return;
-	in_len = strlen(in);
+	in_len = strlen(in_ptr);
 	memcpy(in_ptr, b, b_len);
-	memmove(in_ptr + b_len, in_ptr + a_len, in_len - b_len);
+	memmove(in_ptr + b_len, in_ptr + a_len, in_len - a_len);
 }
 
 /*
