@@ -294,18 +294,18 @@ spawn_child_setids(struct child_config *cc)
 	}
 
 	if (cc->cc_gid != -1) {
-		if (setegid(cc->cc_gid) != 0)
+		if (setgid(cc->cc_gid) != 0)
 			exit(1);
 
-		if (setgid(cc->cc_gid) != 0)
+		if (setegid(cc->cc_gid) != 0)
 			exit(1);
 	}
 
 	if (cc->cc_uid != -1) {
-		if (seteuid(cc->cc_uid) != 0)
+		if (setuid(cc->cc_uid) != 0)
 			exit(1);
 
-		if (setuid(cc->cc_uid) != 0)
+		if (seteuid(cc->cc_uid) != 0)
 			exit(1);
 
 		if (setuid(0) != -1)
