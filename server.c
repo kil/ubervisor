@@ -1462,6 +1462,8 @@ load_dump(char *fname)
 	len = json_object_array_length(obj);
 	for (i = 0; i < len; i++) {
 		t = json_object_array_get_idx(obj, i);
+		if (!json_object_is_type(t, json_type_object))
+			return 0;
 		if ((cc = child_config_from_json(t)) == NULL)
 			return 0;
 		slog("load: %s\n", cc->cc_name);
