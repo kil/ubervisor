@@ -43,7 +43,6 @@
 #define DEBUG_VERSION	""
 #endif
 
-#define VERSION		"0.0.1" DEBUG_VERSION
 #define AUTHOR		"Kilian Klimek <kilian.klimek@googlemail.com>"
 #ifdef DEBUG
 const char		*_malloc_options = "J";
@@ -55,7 +54,7 @@ char			*program_name;
 static void
 print_version(void)
 {
-	printf("ubervisor-" VERSION " by " AUTHOR "\n");
+	printf("ubervisor-" UV_VERSION DEBUG_VERSION " by " AUTHOR "\n");
 }
 
 static void

@@ -13,3 +13,7 @@ uberdump_*
 doc/build
 *.un~
 *.swp
+_CPack_Packages
+CPackConfig.cmake
+CPackSourceConfig.cmake
+*.deb
