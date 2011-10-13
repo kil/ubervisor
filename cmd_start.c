@@ -36,13 +36,14 @@
 #include "misc.h"
 #include "child_config.h"
 
-static char start_opts[] = "+d:e:f:g:hH:i:k:o:s:u:";
+static char start_opts[] = "+d:e:f:g:G:hH:i:k:o:s:u:U:";
 
 static struct option start_longopts[] = {
 	{ "dir",	required_argument,	NULL,	'd' },
 	{ "stderr",	required_argument,	NULL,	'e' },
 	{ "fatal",	required_argument,	NULL,	'f' },
 	{ "gid",	required_argument,	NULL,	'g' },
+	{ "groupname",	required_argument,	NULL,	'G' },
 	{ "help",	no_argument,		NULL,	'h' },
 	{ "heartbeat",	required_argument,	NULL,	'H' },
 	{ "instances",	required_argument,	NULL,	'i' },
@@ -50,6 +51,7 @@ static struct option start_longopts[] = {
 	{ "stdout",	required_argument,	NULL,	'o' },
 	{ "status",	required_argument,	NULL,	's' },
 	{ "uid",	required_argument,	NULL,	'u' },
+	{ "username",	required_argument,	NULL,	'U' },
 	{ NULL,		0,			NULL,	0 }
 };
 
@@ -63,6 +65,7 @@ help_start(void)
 	printf("\t-e, --stderr FILE     stderr log FILE (/dev/null).\n");
 	printf("\t-f, --fatal COMMAND   command to run on fatal condition (not set).\n");
 	printf("\t-g, --gid GID         GID to start processes as (not set).\n");
+	printf("\t-G, --groupname NAME  loopup and set group id for group NAME (not set).\n");
 	printf("\t-h, --help            help.\n");
 	printf("\t-H, --heartbeat COMMAND\n");
 	printf("\t                      run COMMAND 5 secondly (not set).\n");
@@ -71,6 +74,7 @@ help_start(void)
 	printf("\t-o, --stdout FILE     stdout log FILE (/dev/null).\n");
 	printf("\t-s, --status STATUS   status to create group with (1).\n");
 	printf("\t-u, --uid UID         UID to start processes as (not set).\n");
+	printf("\t-U, --username NAME   lookup user NAME and set uid of this user (not set).\n");
 	printf("\n");
 	printf("Status codes:\n");
 	printf("\t1 or start:           running\n");
@@ -119,6 +123,9 @@ cmd_start(int argc, char **argv)
 		case 'g':
 			cc->cc_gid = strtol(optarg, NULL, 10);
 			break;
+		case 'G':
+			cc->cc_groupname = optarg;
+			break;
 		case 'h':
 			help_start();
 			break;
@@ -143,6 +150,9 @@ cmd_start(int argc, char **argv)
 			break;
 		case 'u':
 			cc->cc_uid = strtol(optarg, NULL, 10);
+			break;
+		case 'U':
+			cc->cc_username = optarg;
 			break;
 		default:
 			help_start();

@@ -66,6 +66,8 @@ child_config_serialize(const struct child_config *cc)
 	ADD("dir", cc->cc_dir);
 	ADD("heartbeat", cc->cc_heartbeat);
 	ADD("fatal_cb", cc->cc_fatal_cb);
+	ADD("username", cc->cc_username);
+	ADD("groupname", cc->cc_groupname);
 	ADDINT("instances", cc->cc_instances);
 	ADDINT("status", cc->cc_status);
 	ADDINT("killsig", cc->cc_killsig);
@@ -125,6 +127,8 @@ struct child_config *child_config_from_json(json_object *obj)
 	GET(ret->cc_dir, "dir");
 	GET(ret->cc_heartbeat, "heartbeat");
 	GET(ret->cc_fatal_cb, "fatal_cb");
+	GET(ret->cc_username, "username");
+	GET(ret->cc_groupname, "groupname");
 	GETINT(ret->cc_instances, "instances");
 	GETINT(ret->cc_status, "status");
 	GETINT(ret->cc_killsig, "killsig");
@@ -185,6 +189,8 @@ child_config_free(struct child_config *cc)
 	FREE(cc->cc_dir);
 	FREE(cc->cc_heartbeat);
 	FREE(cc->cc_fatal_cb);
+	FREE(cc->cc_username);
+	FREE(cc->cc_groupname);
 	if (cc->cc_command) {
 		for (i = 0; cc->cc_command[i] != NULL; i++)
 			free(cc->cc_command[i]);

@@ -36,7 +36,7 @@
 #include "misc.h"
 #include "child_config.h"
 
-static char get_opts[] = "dDefghHikosu";
+static char get_opts[] = "dDefgGhHikosuU";
 
 static struct option get_longopts[] = {
 	{ "dir",	no_argument,		NULL,	'd' },
@@ -44,6 +44,7 @@ static struct option get_longopts[] = {
 	{ "stderr",	no_argument,		NULL,	'e' },
 	{ "fatal",	no_argument,		NULL,	'f' },
 	{ "gid",	no_argument,		NULL,	'g' },
+	{ "groupname",	no_argument,		NULL,	'G' },
 	{ "help",	no_argument,		NULL,	'h' },
 	{ "heartbeat",	no_argument,		NULL,	'H' },
 	{ "instances",	no_argument,		NULL,	'i' },
@@ -51,6 +52,7 @@ static struct option get_longopts[] = {
 	{ "stdout",	no_argument,		NULL,	'o' },
 	{ "status",	no_argument,		NULL,	's' },
 	{ "uid",	no_argument,		NULL,	'u' },
+	{ "username",	no_argument,		NULL,	'U' },
 	{ NULL,		0,			NULL,	0 }
 };
 
@@ -91,7 +93,9 @@ cmd_get(int argc, char **argv)
 				get_instances = 0,
 				get_killsig = 0,
 				get_heartbeat = 0,
-				get_fatal = 0;
+				get_fatal = 0,
+				get_username = 0,
+				get_groupname = 0;
 
 	char			*msg;
 
@@ -120,6 +124,9 @@ cmd_get(int argc, char **argv)
 		case 'g':
 			get_gid = 1;
 			break;
+		case 'G':
+			get_groupname = 1;
+			break;
 		case 'h':
 			help_get();
 			break;
@@ -140,6 +147,9 @@ cmd_get(int argc, char **argv)
 			break;
 		case 'u':
 			get_uid = 1;
+			break;
+		case 'U':
+			get_username = 1;
 			break;
 		default:
 			help_get();
@@ -227,6 +237,8 @@ cmd_get(int argc, char **argv)
 	GETSTR("dir", get_dir);
 	GETSTR("heartbeat", get_heartbeat);
 	GETSTR("fatal_cb", get_fatal);
+	GETSTR("username", get_username);
+	GETSTR("groupname", get_groupname);
 	GETINT("uid", get_uid);
 	GETINT("gid", get_gid);
 	GETINT("status", get_status);

@@ -54,7 +54,9 @@ struct child_config {
 					*cc_stderr,
 					*cc_dir,
 					*cc_heartbeat,
-					*cc_fatal_cb;
+					*cc_fatal_cb,
+					*cc_username,
+					*cc_groupname;
 
 	int				cc_instances,
 					cc_status,

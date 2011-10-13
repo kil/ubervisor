@@ -28,6 +28,10 @@ Options
 -g, --gid GID                   Set group id to ``GID`` for childs in this group.
                                 Ubervisor may need to run as root if this option
                                 is used.
+-G, --groupname NAME            lookup the group id of group NAME and set the
+                                group id of childs in this group to it. If
+                                this option is set, the ``-g`` option is
+                                ignored.
 -h, --help                      display a short help.
 -H, --heartbeat COMMAND         run ``COMMAND`` 5 secondly. See below.
 -i, --instances COUNT           number of process to start. By default only
@@ -44,6 +48,10 @@ Options
                                 running status (1) is used.
 -u, --uid UID                   ``UID`` to start processes as. The same
                                 limitations as for the ``-g`` option apply.
+-U, --username NAME             lookup the user id of the user NAME. The user
+                                id for processes in this group will be set to
+                                it. If this option is set, the ``-u`` option is
+                                ignored.
 
 
 Status Codes

@@ -21,13 +21,15 @@ Options
 -e, --stderr     print standard error log file name.
 -f, --fatal      print fatal_cb.
 -g, --gid        print group id processes are started with.
+-G, --groupname  print the groups name that is looked up for setting the group 
+                 id.
 -H, --heartbeat  print heartbeat command.
 -i, --instances  print number of instances.
 -k, --killsig    print signal used to kill processes.
 -o, --stdout     print standard output log file name.
 -s, --status     print status.
 -u, --uid        print user id processes are started with.
-
+-U, --username   print the users name who's looked up for setting the user id.
 
 See Also
 ========

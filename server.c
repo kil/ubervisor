@@ -34,6 +34,7 @@
 #include <time.h>
 #include <getopt.h>
 #include <pwd.h>
+#include <grp.h>
 #include <errno.h>
 #include <limits.h>
 
@@ -277,6 +278,21 @@ schedule_heartbeat(struct process *p)
 static void
 spawn_child_setids(struct child_config *cc)
 {
+	struct passwd		*pw;
+	struct group		*gr;
+
+	if (cc->cc_username != NULL) {
+		if ((pw = getpwnam(cc->cc_username)) == NULL)
+			exit(1);
+		cc->cc_uid = pw->pw_uid;
+	}
+
+	if (cc->cc_groupname != NULL) {
+		 if ((gr = getgrnam(cc->cc_groupname)) == NULL)
+			 exit(1);
+		 cc->cc_gid = gr->gr_gid;
+	}
+
 	if (cc->cc_gid != -1) {
 		if (setegid(cc->cc_gid) != 0)
 			exit(1);
