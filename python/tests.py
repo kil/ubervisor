@@ -36,6 +36,7 @@ from os import stat, unlink, path, environ
 from time import sleep
 from tempfile import mkdtemp
 from shutil import rmtree
+from subprocess import Popen, PIPE
 
 SEND_GARBAGE = True
 SLEEP_SEC = 0.02
@@ -269,6 +270,34 @@ class TestInput2(BaseTest):
     def test_in_t15(self):
         self._send_garbage("SUBS")
 
+class TestReplace(BaseTest):
+    def test_stdout_replace(self):
+        fs = path.join(self.tmpdir, 'stdout-%(NUM).log')
+        self.c.start('test', ['/bin/sleep', '1'], instances = 2, stdout = fs)
+        self.c.update('test', status = 2)
+        n = fs.replace('%(NUM)', '%d')
+        for x in range(0, 2):
+            stat(n % x)
+
+    def test_stderr_replace(self):
+        fs = path.join(self.tmpdir, 'stderr-%(NUM).log')
+        self.c.start('test', ['/bin/sleep', '1'], instances = 2, stderr = fs)
+        self.c.update('test', status = 2)
+        n = fs.replace('%(NUM)', '%d')
+        for x in range(0, 2):
+            stat(n % x)
+
+    def test_both_replace(self):
+        fs1 = path.join(self.tmpdir, 'stdout-%(NUM).log')
+        fs2 = path.join(self.tmpdir, 'stderr-%(NUM).log')
+        self.c.start('test', ['/bin/sleep', '1'], instances = 2, stdout = fs1, stderr = fs2)
+        self.c.update('test', status = 2)
+        n = fs1.replace('%(NUM)', '%d')
+        for x in range(0, 2):
+            stat(n % x)
+        n = fs2.replace('%(NUM)', '%d')
+        for x in range(0, 2):
+            stat(n % x)
 
 class TestUpdateCommand(BaseTest):
     def test_instances_increase(self):
@@ -439,8 +468,17 @@ class TestAsync(BaseTest):
         c2.close()
 
 if __name__ == '__main__':
+    start = environ.get("UBERVISOR_RUN", None)
+    if start:
+        p = Popen([start, "server"])
+
     if len(sys.argv) > 1:
         s = TestLoader().loadTestsFromName(sys.argv[1])
     else:
         s = TestLoader().loadTestsFromName('tests')
     TextTestRunner(verbosity=2).run(s)
+
+    if start:
+        x = Popen([start, "exit"], stdout = PIPE, stderr = PIPE)
+        x.wait()
+        p.wait()

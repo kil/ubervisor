@@ -47,12 +47,14 @@ ck0() {
 				echo error
 				cat out
 				cat err
+				$UBER exit 2> /dev/null
 				exit 1
 			fi
 		else
 			echo ok
 		fi
 	else
+		$UBER exit 2> /dev/null
 		exit 1
 	fi
 
@@ -95,6 +97,10 @@ ck0 'start -k'	0 '' $UBER start -k 9 tst /bin/sleep 10
 st
 ck0 'start -s'	0 '' $UBER start -s 2 tst /bin/sleep 10
 st
+ck0 'start -s'	0 '' $UBER start -s start tst /bin/sleep 10
+st
+ck0 'start -s'	0 '' $UBER start -s stop tst /bin/sleep 10
+st
 ck0 'start -f'	0 '' $UBER start -f /bin/echo tst /bin/sleep 10
 st
 ck0 'start -H'	0 '' $UBER start -H /bin/echo tst /bin/sleep 10
@@ -105,7 +111,11 @@ ck0 'update -o'	0 '' $UBER update -o $TMPDIR/x tst
 ck0 'update -e'	0 '' $UBER update -e $TMPDIR/x2 tst
 ck0 'update -d'	0 '' $UBER update -d /tmp tst
 ck0 'update -k'	0 '' $UBER update -k 12 tst
-ck0 'update -s'	0 '' $UBER update -s 2 tst
+ck0 'update -s stop'	0 ''	$UBER update -s stop tst
+ck0 'get -g'	0 '2'		$UBER get -s tst
+ck0 'update -s start'	0 '' $UBER update -s start tst
+ck0 'get -g'	0 '1'		$UBER get -s tst
+ck0 'update -s 2'	0 '' $UBER update -s 2 tst
 ck0 'update -i'	0 '' $UBER update -i 2 tst
 ck0 'update -d'	0 '' $UBER update -d /tmp tst
 ck0 'update -H'	0 '' $UBER update -H /bin/echo tst
@@ -135,5 +145,21 @@ ck0 delete	0 '' $UBER delete tst
 #ck0 exit	0 '' $UBER exit
 UBERVISOR_RSH="$UBER proxy" $UBER exit
 pgrep ubervisor
+
+# test loading dumps
+cat > $TMPDIR/test_dump1 << __EOF__
+[
+{'name': 'test',
+'command': ["/bin/sleep", "2"]}
+]
+__EOF__
+
+ck0 start	0 '' $UBER server -c $TMPDIR/test_dump1
+ck0 get		0 '1' $UBER get -s test
+ck0 dump	0 '' $UBER dump
+$UBER exit
+ck0 start	0 '' $UBER server -l
+ck0 get		0 '1' $UBER get -s test
+$UBER exit
 
 rm -rf $TMPDIR
