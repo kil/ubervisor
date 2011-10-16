@@ -90,6 +90,8 @@ class TestStartCommand(BaseTest):
 
     def test_start_enter_fatal(self):
         self.c.start('test', ['illegalpath', '0.1'])
+        # give the server a chance to start the process a few times.
+        sleep(0.8)
         r = self.c.get('test')
         self.assertEqual(r['status'], STATUS_BROKEN)
 
@@ -142,11 +144,25 @@ class TestDeleteCommand(BaseTest):
 
     def test_delete_multiple(self):
         self.c.start('test', ['/bin/sleep', '1'], instances = 3)
-        r = self.c.kill('test')
-        self.assertEqual(len(r), 3)
         r = self.c.delete('test')
         self.assertEqual(len(r), 3)
 
+class TestKillCommand(BaseTest):
+    def test_kill0(self):
+        self.c.start('test', ['/bin/sleep', '1'], status = STATUS_STOPPED,
+                instances = 1)
+        r = self.c.kill('test')
+        self.assertEqual(len(r), 0)
+
+    def test_kill1(self):
+        self.c.start('test', ['/bin/sleep', '1'], instances = 1)
+        r = self.c.kill('test')
+        self.assertEqual(len(r), 1)
+
+    def test_kill4(self):
+        self.c.start('test', ['/bin/sleep', '1'], instances = 4)
+        r = self.c.kill('test')
+        self.assertEqual(len(r), 4)
 
 class TestGetCommand(BaseTest):
     def test_get_args(self):
@@ -385,6 +401,8 @@ class TestInt(BaseTest):
     def test_call_fatal(self):
         cmd = path.join(path.dirname(path.abspath(__file__)), 'fatal_test.sh')
         self.c.start('fatal_grp', ['illegalpath', '0.1'], fatal_cb = cmd)
+        # give the server a chance to start the process a few times.
+        sleep(0.8)
         r = self.c.get('fatal_grp')
         self.c.delete('fatal_grp')
         self.assertEqual(r['status'], STATUS_BROKEN)
