@@ -104,7 +104,6 @@ struct child_config *child_config_from_json(json_object *obj)
 
 #define GET(X, Y)	if ((t = json_object_object_get(obj, Y)) != NULL) { \
 				if (!json_object_is_type(t, json_type_string)) { \
-					json_object_put(obj); \
 					return NULL; \
 				} \
 				X = xstrdup(json_object_get_string(t)); \
@@ -113,7 +112,6 @@ struct child_config *child_config_from_json(json_object *obj)
 
 #define GETINT(X, Y)	if ((t = json_object_object_get(obj, Y)) != NULL) { \
 				if (!json_object_is_type(t, json_type_int)) { \
-					json_object_put(obj); \
 					return NULL; \
 				} \
 				X = json_object_get_int(t); \
@@ -150,10 +148,7 @@ struct child_config *child_config_from_json(json_object *obj)
 		}
 		ret->cc_command[i] = NULL;
 	}
-
-	json_object_put(obj);
 	return ret;
-
 }
 
 /*
@@ -162,6 +157,7 @@ struct child_config *child_config_from_json(json_object *obj)
 struct child_config *child_config_unserialize(const char *buf)
 {
 	json_object		*obj;
+	struct child_config	*ret;
 
 	if ((obj = json_tokener_parse(buf)) == NULL)
 		return NULL;
@@ -169,7 +165,9 @@ struct child_config *child_config_unserialize(const char *buf)
 		return NULL;
 	if (!json_object_is_type(obj, json_type_object))
 		return NULL;
-	return child_config_from_json(obj);
+	ret = child_config_from_json(obj);
+	json_object_put(obj);
+	return ret;
 }
 
 /*
