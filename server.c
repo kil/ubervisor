@@ -308,11 +308,13 @@ spawn_child_setids(struct child_config *cc)
 		if (seteuid(cc->cc_uid) != 0)
 			exit(1);
 
-		if (setuid(0) != -1)
-			exit(1);
+		if (cc->cc_uid != 0) {
+			if (setuid(0) != -1)
+				exit(1);
+		}
 	}
 
-	if (cc->cc_gid != -1) {
+	if (cc->cc_gid > 0) {
 		if (setgid(0) != -1)
 			exit(1);
 	}
