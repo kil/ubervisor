@@ -31,6 +31,7 @@
 #include <sys/types.h>
 
 void *xmalloc(size_t);
+void *xrealloc(void *, size_t);
 char *xstrdup(const char *);
 void die(const char *) __attribute__ ((noreturn));
 int setnonblock(int);

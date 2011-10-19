@@ -39,6 +39,8 @@
 
 #include <json/json.h>
 
+#include "uvhash.h"
+
 #define STATUS_RUNNING	1
 #define STATUS_STOPPED	2
 #define STATUS_BROKEN	3
@@ -72,11 +74,13 @@ struct child_config {
 	/* internal */
 	int				cc_error;
 	time_t				cc_errtime;
+	struct process			**cc_childs;
 };
 
 LIST_HEAD(child_config_list, child_config);
 
 extern struct child_config_list		child_config_list_head;
+extern uvstrhash_t			*child_config_hash;
 
 char *child_config_serialize(const struct child_config *);
 struct child_config *child_config_unserialize(const char *);

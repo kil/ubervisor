@@ -36,6 +36,7 @@
 #include "child_config.h"
 
 struct child_config_list		child_config_list_head;
+uvstrhash_t				*child_config_hash;
 
 /*
  * Serialize child_config struct to string. Returned buffer must be freed.
@@ -204,6 +205,7 @@ child_config_free(struct child_config *cc)
 	FREE(cc->cc_fatal_cb);
 	FREE(cc->cc_username);
 	FREE(cc->cc_groupname);
+	FREE(cc->cc_childs);
 	if (cc->cc_command) {
 		for (i = 0; cc->cc_command[i] != NULL; i++)
 			free(cc->cc_command[i]);
@@ -238,6 +240,7 @@ void
 child_config_insert(struct child_config *cc)
 {
 	LIST_INSERT_HEAD(&child_config_list_head, cc, cc_ent);
+	uvstrhash_insert(child_config_hash, cc->cc_name, cc);
 }
 
 /*
@@ -246,15 +249,7 @@ child_config_insert(struct child_config *cc)
 struct child_config *
 child_config_find_by_name(const char *n)
 {
-	struct child_config	*cc;
-
-	cc = LIST_FIRST(&child_config_list_head);
-	while (cc) {
-		if (!strcmp(n, cc->cc_name))
-			return cc;
-		cc = LIST_NEXT(cc, cc_ent);
-	}
-	return NULL;
+	return uvstrhash_find(child_config_hash, (char *) n);
 }
 
 /*
@@ -264,6 +259,7 @@ void
 child_config_remove(struct child_config *cc)
 {
 	LIST_REMOVE(cc, cc_ent);
+	uvstrhash_remove(child_config_hash, cc->cc_name);
 }
 
 /*

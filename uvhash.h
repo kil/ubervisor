@@ -25,73 +25,65 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+#ifndef __UVHASH_H
+#define __UVHASH_H
+
 #include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <fcntl.h>
 
-#include "misc.h"
+#include "config.h"
 
-void
-*xmalloc(size_t x)
-{
-	void		*ret;
+#ifdef HAVE_SYS_QUEUE_H
+#include <sys/queue.h>
+#else
+#include "compat/queue.h"
+#endif
 
-	if ((ret = malloc(x)) == NULL)
-		die("malloc");
-	return ret;
-}
+/*
+ * int key
+ */
+struct uvhash_ent_s {
+	LIST_ENTRY(uvhash_ent_s)	he_ent;
+	uint32_t			he_key;
+	void				*he_value;
+};
 
-void *
-xrealloc(void *p, size_t x)
-{
-	void		*ret;
+LIST_HEAD(uvhash_ent_list, uvhash_ent_s);
 
-	if ((ret = realloc(p, x)) == NULL)
-		die("realloc");
-	return ret;
-}
+struct uvhash_s {
+	int				h_size;
+	struct uvhash_ent_list		**h_buckets;
+};
 
-char *
-xstrdup(const char *x)
-{
-	char		*ret;
+typedef struct uvhash_s			uvhash_t;
 
-	if ((ret = strdup(x)) == NULL)
-		die("strdup");
-	return ret;
-}
+uvhash_t *uvhash_new(int);
+void uvhash_insert(uvhash_t *, uint32_t, void *);
+void uvhash_remove(uvhash_t *, uint32_t);
+void *uvhash_find(uvhash_t *, uint32_t);
+void uvhash_bucket_fill(uvhash_t *, FILE *);
 
-void
-die(const char *msg)
-{
-	perror(msg);
-	exit(1);
-}
+/*
+ * string key
+ */
+struct uvstrhash_ent_s {
+	LIST_ENTRY(uvstrhash_ent_s)	she_ent;
+	char				*she_key;
+	void				*she_value;
+};
 
-int
-setcloseonexec(int fd)
-{
-	int fl;
-	fl = fcntl(fd, F_GETFL);
-	if (fl < 0)
-		return fl;
-	fl |= FD_CLOEXEC;
-	if (fcntl(fd, F_SETFL, fl) < 0)
-		return -1;
-	return 0;
-}
+LIST_HEAD(uvstrhash_ent_list, uvstrhash_ent_s);
 
-int
-setnonblock(int fd)
-{
-	int fl;
-	fl = fcntl(fd, F_GETFL);
-	if (fl < 0)
-		return fl;
-	fl |= O_NONBLOCK;
-	if (fcntl(fd, F_SETFL, fl) < 0)
-		return -1;
-	return 0;
-}
+struct uvstrhash_s {
+	int				sh_size;
+	struct uvstrhash_ent_list	**sh_buckets;
+};
 
+typedef struct uvstrhash_s		uvstrhash_t;
+
+uvstrhash_t *uvstrhash_new(int);
+void uvstrhash_insert(uvstrhash_t *, char *, void *);
+void uvstrhash_remove(uvstrhash_t *, char *);
+void *uvstrhash_find(uvstrhash_t *, char *);
+void uvstrhash_bucket_fill(uvstrhash_t *, FILE *);
+
+#endif /* __UVHASH_H */

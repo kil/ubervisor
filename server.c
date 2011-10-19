@@ -57,6 +57,7 @@
 #include "paths.h"
 #include "subscription.h"
 #include "process.h"
+#include "uvhash.h"
 
 #ifdef HAVE_SYS_QUEUE_H
 #include <sys/queue.h>
@@ -450,6 +451,7 @@ spawn(struct child_config *cc, int instance)
 	p->p_instance = instance;
 	schedule_heartbeat(p);
 	process_insert(p);
+	cc->cc_childs[instance] = p;
 	slog("[process_start] %s pid: %d\n", cc->cc_name, pid);
 	return 1;
 }
@@ -550,6 +552,8 @@ signal_cb(int unused0 __attribute__((unused)),
 		evtimer_del(&(p->p_heartbeat_timer));
 		free(p);
 		if (cc) {
+			if (inst < cc->cc_instances)
+				cc->cc_childs[inst] = NULL;
 			if (exit_is_error(ret, cc)) {
 				t = time(NULL);
 				if (cc->cc_errtime + ERROR_PERIOD < t)
@@ -694,6 +698,8 @@ c_spwn(struct client_con *con, char *buf)
 		return 1;
 	}
 
+	cc->cc_childs = xmalloc(sizeof(struct process *) * cc->cc_instances);
+	memset(cc->cc_childs, '\0', sizeof(struct process *) * cc->cc_instances);
 	child_config_insert(cc);
 	if (!auto_dump)
 		send_status_msg(con, 1, "success");
@@ -806,13 +812,22 @@ c_updt(struct client_con *con, char *buf)
 	if (cc->cc_instances != -1) {
 		slog("[update] instances %d -> %d\n", up->cc_instances, cc->cc_instances);
 		if (cc->cc_instances > up->cc_instances) {
+			up->cc_childs = xrealloc(up->cc_childs,
+					sizeof(struct process *) * cc->cc_instances);
 			i = up->cc_instances;
 			up->cc_instances = cc->cc_instances;
 			for (; i < up->cc_instances; i++)
 				spawn(up, i);
 		} else {
 			/* XXX: maybe return pids for cc->cc_instances > up->cc_instances */
+			for (i = cc->cc_instances; i < up->cc_instances; i++) {
+				if (up->cc_childs[i] != NULL)
+					up->cc_childs[i]->p_child_config = NULL;
+				up->cc_childs[i] = NULL;
+			}
 			up->cc_instances = cc->cc_instances;
+			up->cc_childs = xrealloc(up->cc_childs,
+					sizeof(struct process *) * up->cc_instances);
 		}
 	}
 
@@ -957,7 +972,8 @@ c_kill(struct client_con *con, char *buf)
 				*m,
 				*p;
 
-	int			sig;
+	int			sig,
+				x;
 
 	if ((obj = json_tokener_parse(buf)) == NULL) {
 		send_status_msg(con, 0, "failure");
@@ -1023,13 +1039,14 @@ c_kill(struct client_con *con, char *buf)
 
 	json_object_object_add(obj, "pids", m);
 
-	LIST_FOREACH(i, &process_list_head, p_ent) {
-		if (i->p_child_config == cc) {
-			kill(i->p_pid, sig);
-			if ((p = json_object_new_int(i->p_pid)) == NULL)
-				return 1;
-			json_object_array_add(m, p);
-		}
+	for (x = 0; x < cc->cc_instances; x++) {
+		i = cc->cc_childs[x];
+		if (i == NULL)
+			continue;
+		kill(i->p_pid, sig);
+		if ((p = json_object_new_int(i->p_pid)) == NULL)
+			return 1;
+		json_object_array_add(m, p);
 	}
 
 	ret = xstrdup(json_object_to_json_string(obj));
@@ -1072,6 +1089,8 @@ c_dele(struct client_con *con, char *buf)
 				*c,
 				*m,
 				*p;
+
+	int			x;
 
 	if ((obj = json_tokener_parse(buf)) == NULL) {
 		send_status_msg(con, 0, "failure");
@@ -1132,13 +1151,14 @@ c_dele(struct client_con *con, char *buf)
 
 	json_object_object_add(obj, "pids", m);
 
-	LIST_FOREACH(i, &process_list_head, p_ent) {
-		if (i->p_child_config == cc) {
-			i->p_child_config = NULL;
-			if ((p = json_object_new_int(i->p_pid)) == NULL)
-				return 1;
-			json_object_array_add(m, p);
-		}
+	for (x = 0; x < cc->cc_instances; x++) {
+		i = cc->cc_childs[x];
+		if (i == NULL)
+			continue;
+		i->p_child_config = NULL;
+		if ((p = json_object_new_int(i->p_pid)) == NULL)
+			return 1;
+		json_object_array_add(m, p);
 	}
 
 	send_status_update_notification(cc->cc_name, STATUS_DELETE);
@@ -1318,6 +1338,8 @@ c_pids(struct client_con *con, char *buf)
 				*m,
 				*p;
 
+	int			x;
+
 	if ((obj = json_tokener_parse(buf)) == NULL) {
 		send_status_msg(con, 0, "failure");
 		return 0;
@@ -1370,12 +1392,13 @@ c_pids(struct client_con *con, char *buf)
 
 	json_object_object_add(obj, "pids", m);
 
-	LIST_FOREACH(i, &process_list_head, p_ent) {
-		if (i->p_child_config == cc) {
-			if ((p = json_object_new_int(i->p_pid)) == NULL)
-				return 1;
-			json_object_array_add(m, p);
-		}
+	for (x = 0; x < cc->cc_instances; x++) {
+		i = cc->cc_childs[x];
+		if (i == NULL)
+			continue;
+		if ((p = json_object_new_int(i->p_pid)) == NULL)
+			return 1;
+		json_object_array_add(m, p);
 	}
 
 	ret = xstrdup(json_object_to_json_string(obj));
@@ -1645,6 +1668,8 @@ load_dump(char *fname)
 			cc->cc_instances = 1;
 		if (cc->cc_status == -1)
 			cc->cc_status = STATUS_RUNNING;
+		cc->cc_childs = xmalloc(sizeof(struct process *) * cc->cc_instances);
+		memset(cc->cc_childs, '\0', sizeof(struct process *) * cc->cc_instances);
 		child_config_insert(cc);
 		if (cc->cc_status == STATUS_RUNNING) {
 			for (j = 0; j < cc->cc_instances; j++)
@@ -1732,6 +1757,8 @@ cmd_server(int argc, char **argv)
 	LIST_INIT(&process_list_head);
 	LIST_INIT(&child_config_list_head);
 	LIST_INIT(&client_con_list_head);
+	process_hash = uvhash_new(16);
+	child_config_hash = uvstrhash_new(16);
 
 	while ((ch = getopt_long(argc, argv, server_opts, server_longopts, NULL)) != -1) {
 		switch (ch) {

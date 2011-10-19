@@ -39,6 +39,8 @@
 #include "compat/queue.h"
 #endif
 
+#include "uvhash.h"
+
 struct process {
 	LIST_ENTRY(process)	p_ent;
 	pid_t			p_pid;
@@ -51,6 +53,7 @@ struct process {
 LIST_HEAD(process_list, process);
 
 extern struct process_list	process_list_head;
+extern uvhash_t			*process_hash;
 
 void process_insert(struct process *);
 struct process * process_find_by_pid(pid_t);
