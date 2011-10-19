@@ -104,6 +104,7 @@ struct child_config *child_config_from_json(json_object *obj)
 
 #define GET(X, Y)	if ((t = json_object_object_get(obj, Y)) != NULL) { \
 				if (!json_object_is_type(t, json_type_string)) { \
+					child_config_free(ret); \
 					return NULL; \
 				} \
 				X = xstrdup(json_object_get_string(t)); \
@@ -112,14 +113,17 @@ struct child_config *child_config_from_json(json_object *obj)
 
 #define GETINT(X, Y)	if ((t = json_object_object_get(obj, Y)) != NULL) { \
 				if (!json_object_is_type(t, json_type_int)) { \
+					child_config_free(ret); \
 					return NULL; \
 				} \
 				X = json_object_get_int(t); \
 			}
 
 	GET(ret->cc_name, "name");
-	if (ret->cc_name == NULL)
+	if (ret->cc_name == NULL) {
+		child_config_free(ret);
 		return NULL;
+	}
 	GET(ret->cc_stdout, "stdout");
 	GET(ret->cc_stderr, "stderr");
 	GET(ret->cc_dir, "dir");
@@ -135,15 +139,24 @@ struct child_config *child_config_from_json(json_object *obj)
 	GETINT(ret->cc_error, "error");
 
 	if ((t = json_object_object_get(obj, "args")) != NULL) {
-		if (!json_object_is_type(t, json_type_array))
+		if (!json_object_is_type(t, json_type_array)) {
+			child_config_free(ret);
 			return NULL;
+		}
 
 		len = json_object_array_length(t);
 		ret->cc_command = xmalloc(sizeof(char *) * (len + 1));
 
 		for (i = 0; i < len; i++) {
-			if ((s = json_object_array_get_idx(t, i)) == NULL)
+			if ((s = json_object_array_get_idx(t, i)) == NULL) {
+				ret->cc_command[i] = NULL;
+				child_config_free(ret);
 				return NULL;
+			}
+			if (!json_object_is_type(s, json_type_string)) {
+				child_config_free(ret);
+				return NULL;
+			}
 			ret->cc_command[i] = xstrdup(json_object_get_string(s));
 		}
 		ret->cc_command[i] = NULL;
@@ -163,8 +176,10 @@ struct child_config *child_config_unserialize(const char *buf)
 		return NULL;
 	if (is_error(obj))
 		return NULL;
-	if (!json_object_is_type(obj, json_type_object))
+	if (!json_object_is_type(obj, json_type_object)) {
+		json_object_put(obj);
 		return NULL;
+	}
 	ret = child_config_from_json(obj);
 	json_object_put(obj);
 	return ret;
