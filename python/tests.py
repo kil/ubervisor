@@ -485,6 +485,40 @@ class TestAsync(BaseTest):
         self.assertEqual(cid, c)
         c2.close()
 
+    def test_status_subs(self):
+        cmd = ['/bin/sleep', '1']
+        c = self.c.subs(2)
+        self.c.start('test', cmd, wait = False)
+
+        while True:
+            r, msg = self.c.wait()
+            if r == c:
+                break
+        self.assertEqual(msg['name'], 'test')
+        self.assertEqual(msg['status'], 0)
+        while True:
+            r, msg = self.c.wait()
+            if r == c:
+                break
+        self.assertEqual(msg['name'], 'test')
+        self.assertEqual(msg['status'], 1)
+
+        self.c.update('test', status = 2, wait = False)
+
+        while True:
+            r, msg = self.c.wait()
+            if r == c:
+                break
+        self.assertEqual(msg['name'], 'test')
+        self.assertEqual(msg['status'], 2)
+        self.c.delete('test', wait = False)
+        while True:
+            r, msg = self.c.wait()
+            if r == c:
+                break
+        self.assertEqual(msg['name'], 'test')
+        self.assertEqual(msg['status'], 4)
+
 if __name__ == '__main__':
     start = environ.get("UBERVISOR_RUN", None)
     if start:

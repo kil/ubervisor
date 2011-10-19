@@ -157,30 +157,15 @@ drop_client_connection(struct client_con *c)
  * send notification message to subscribed clients.
  */
 static void
-send_notification(int n, const char *msg)
+send_notification(int n, const char *ret)
 {
 	struct subscription	*s;
 	uint16_t		len;
 
-	char			*ret;
 	int			ret_len;
 
-	json_object		*obj,
-				*c;
-
-	if ((obj = json_object_new_object()) == NULL)
-		return;
-
-	if ((c = json_object_new_string(msg)) == NULL)
-		return;
-
-	json_object_object_add(obj, "msg", c);
-
-	ret = xstrdup(json_object_to_json_string(obj));
 	ret_len = strlen(ret);
 	len = htons(ret_len);
-
-	json_object_put(obj);
 
 	s = LIST_FIRST(&subscription_list_head);
 	while (s != NULL) {
@@ -199,8 +184,31 @@ send_notification(int n, const char *msg)
 		}
 		s = LIST_NEXT(s, s_ent);
 	}
+}
 
-	free(ret);
+
+/*
+ * send log file notification.
+ */
+static void
+send_log_notification(const char *msg)
+{
+	const char		*ret;
+
+	json_object		*obj,
+				*c;
+
+	if ((obj = json_object_new_object()) == NULL)
+		return;
+
+	if ((c = json_object_new_string(msg)) == NULL)
+		return;
+
+	json_object_object_add(obj, "msg", c);
+
+	ret = json_object_to_json_string(obj);
+	send_notification(SUBS_SERVER, ret);
+	json_object_put(obj);
 }
 
 /*
@@ -230,7 +238,31 @@ slog(const char *fmt, ...)
 	if (out_len < 0)
 		return;
 	fwrite(out, out_len, 1, log_fd);
-	send_notification(SUBS_SERVER, out);
+	send_log_notification(out);
+}
+
+/*
+ * send notification about group status update.
+ */
+static void
+send_status_update_notification(const char *name, int status)
+{
+	json_object		*obj,
+				*t;
+	const char		*str;
+
+	obj = json_object_new_object();
+
+	t = json_object_new_string(name);
+	json_object_object_add(obj, "name", t);
+
+	t = json_object_new_int(status);
+	json_object_object_add(obj, "status", t);
+
+	str = json_object_to_json_string(obj);
+	send_notification(SUBS_STATUS, str);
+
+	json_object_put(obj);
 }
 
 /*
@@ -528,6 +560,7 @@ signal_cb(int unused0 __attribute__((unused)),
 				if (cc->cc_error >= (ERROR_MAX * cc->cc_instances)) {
 					cc->cc_status = STATUS_BROKEN;
 					slog("spawn failures. setting broken on %s\n", cc->cc_name);
+					send_status_update_notification(cc->cc_name, STATUS_BROKEN);
 					run_fatal_cb(cc);
 				}
 			}
@@ -668,6 +701,8 @@ c_spwn(struct client_con *con, char *buf)
 		c_dump(con);
 
 	slog("[start] creating group %s\n", cc->cc_name);
+	send_status_update_notification(cc->cc_name, STATUS_CREATE);
+	send_status_update_notification(cc->cc_name, cc->cc_status);
 	if (cc->cc_status != STATUS_RUNNING)
 		return 1;
 
@@ -792,6 +827,7 @@ c_updt(struct client_con *con, char *buf)
 			}
 		}
 		up->cc_status = cc->cc_status;
+		send_status_update_notification(up->cc_name, up->cc_status);
 	}
 
 	child_config_free(cc);
@@ -1105,6 +1141,7 @@ c_dele(struct client_con *con, char *buf)
 		}
 	}
 
+	send_status_update_notification(cc->cc_name, STATUS_DELETE);
 	child_config_free(cc);
 
 	ret = xstrdup(json_object_to_json_string(obj));

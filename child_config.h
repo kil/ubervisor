@@ -44,6 +44,9 @@
 #define STATUS_BROKEN	3
 #define STATUS_MAX	3
 
+#define STATUS_CREATE	4	/* used only for notification */
+#define STATUS_DELETE	5	/* used only for notification */
+
 struct child_config {
 	LIST_ENTRY(child_config)	cc_ent;
 

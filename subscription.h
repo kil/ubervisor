@@ -43,6 +43,7 @@
  * values for subscription s_ident
  */
 #define SUBS_SERVER	1
+#define SUBS_STATUS	2
 
 struct subscription {
 	LIST_ENTRY(subscription)	s_ent;
