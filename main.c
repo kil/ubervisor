@@ -72,6 +72,7 @@ help(void)
 	printf("\tget\t get config of a group.\n");
 	printf("\tkill\t kill all processes in a group (aka restart)\n");
 	printf("\tlist\t list groups.\n");
+	printf("\tpids\t get pids of processes in a group.\n");
 	printf("\tproxy\t multiplex stdin/out to socket.\n");
 	printf("\tserver\t start the server\n");
 	printf("\tstart\t start a program\n");
@@ -119,6 +120,8 @@ main(int argc, char **argv)
 		ret = cmd_proxy(argc, argv);
 	} else if (!strcmp(cmd, "subs")) {
 		ret = cmd_subscribe(argc, argv);
+	} else if (!strcmp(cmd, "pids")) {
+		ret = cmd_pids(argc, argv);
 	} else if (!strcmp(cmd, "-v") || !strcmp(cmd, "-V")) {
 		print_version();
 	} else {

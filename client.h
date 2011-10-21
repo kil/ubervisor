@@ -40,5 +40,6 @@ int cmd_delete(int, char **);
 int cmd_kill(int, char **);
 int cmd_dump(int, char **);
 int cmd_list(int, char **);
+int cmd_pids(int, char **);
 
 #endif /* __CLIENT_H */

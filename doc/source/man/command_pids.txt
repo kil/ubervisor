@@ -1,0 +1,19 @@
+==============
+ubervisor-pids
+==============
+
+Synopsis
+========
+
+``ubervisor`` *pids* *name*
+
+Description
+===========
+
+Get list of process ids of the processes in the group *name*.
+
+See Also
+========
+:manpage:`ubervisor(1)`
+
+.. vim:spell:ft=rst

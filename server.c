@@ -1299,6 +1299,107 @@ c_subs(struct client_con *con, char *buf)
 }
 
 /*
+ * get pids for a group.
+ */
+static int
+c_pids(struct client_con *con, char *buf)
+{
+	char			*ret = NULL;
+	const char		*n;
+
+	ssize_t			ret_len;
+	uint16_t		len;
+
+	struct child_config	*cc;
+	struct process		*i;
+
+	json_object		*obj,
+				*c,
+				*m,
+				*p;
+
+	if ((obj = json_tokener_parse(buf)) == NULL) {
+		send_status_msg(con, 0, "failure");
+		return 0;
+	}
+
+	if (is_error(obj)) {
+		send_status_msg(con, 0, "failure");
+		return 0;
+	}
+
+	if (!json_object_is_type(obj, json_type_object)) {
+		send_status_msg(con, 0, "failure");
+		return 0;
+	}
+
+	if ((m = json_object_object_get(obj, "name")) == NULL) {
+		send_status_msg(con, 0, "failure");
+		return 0;
+	}
+
+	if (!json_object_is_type(m, json_type_string)) {
+		send_status_msg(con, 0, "failure");
+		return 0;
+	}
+
+	if ((n = json_object_get_string(m)) == NULL) {
+		send_status_msg(con, 0, "failure");
+		return 0;
+	}
+
+	cc = child_config_find_by_name(n);
+	json_object_put(obj);
+
+	if (cc == NULL) {
+		send_status_msg(con, 0, "name not found");
+		return 1;
+	}
+
+	/* construct reply */
+	if ((obj = json_object_new_object()) == NULL)
+		return 1;
+
+	if ((c = json_object_new_boolean(1)) == NULL)
+		return 1;
+
+	json_object_object_add(obj, "code", c);
+
+	if ((m = json_object_new_array()) == NULL)
+		return 1;
+
+	json_object_object_add(obj, "pids", m);
+
+	LIST_FOREACH(i, &process_list_head, p_ent) {
+		if (i->p_child_config == cc) {
+			if ((p = json_object_new_int(i->p_pid)) == NULL)
+				return 1;
+			json_object_array_add(m, p);
+		}
+	}
+
+	ret = xstrdup(json_object_to_json_string(obj));
+	ret_len = strlen(ret);
+	len = htons(ret_len);
+
+	json_object_put(obj);
+
+	if (bufferevent_write(con->c_be, &len, sizeof(uint16_t)) == -1) {
+		slog("write failed in pids\n");
+	}
+
+	if (bufferevent_write(con->c_be, &con->c_cid, sizeof(uint16_t)) == -1) {
+		slog("write failed in pids\n");
+	}
+
+	if (bufferevent_write(con->c_be, ret, ret_len) == -1) {
+		slog("write failed in pids\n");
+	}
+	free(ret);
+	return 1;
+}
+
+/*
  * Execute command.
  */
 static int
@@ -1337,6 +1438,8 @@ run_server_command(char *buf, struct client_con *c)
 		cr = c_getc(c, cmd_buf);
 	else if (!strncmp(buf, "SUBS", 4))
 		cr = c_subs(c, cmd_buf);
+	else if (!strncmp(buf, "PIDS", 4))
+		cr = c_pids(c, cmd_buf);
 	if (!cr)
 		drop_client_connection(c);
 	return cr;

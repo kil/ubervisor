@@ -257,6 +257,23 @@ class UbervisorClient(object):
             raise UbervisorClientException(r['msg'])
         return r['pids']
 
+    def pids(self, name, wait = True):
+        """
+        Get current pids in group *name*.
+
+        :param str name:        name of group.
+        :param bool wait:       if ``True``, wait for server reply.
+        :returns:               list of pids in the group.
+        """
+        d = dumps(dict(name = name))
+        x = self._send('PIDS', d)
+        if not wait:
+            return x
+        r = self._reply(x)
+        if r['code'] != True:
+            raise UbervisorClientException(r['msg'])
+        return r['pids']
+
     def get(self, name, wait = True):
         """
         Get config for *name*.

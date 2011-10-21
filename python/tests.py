@@ -164,6 +164,23 @@ class TestKillCommand(BaseTest):
         r = self.c.kill('test')
         self.assertEqual(len(r), 4)
 
+class TestPidsCommand(BaseTest):
+    def test_pids0(self):
+        self.c.start('test', ['/bin/sleep', '1'], status = STATUS_STOPPED,
+                instances = 1)
+        r = self.c.pids('test')
+        self.assertEqual(len(r), 0)
+
+    def test_pids1(self):
+        self.c.start('test', ['/bin/sleep', '1'], instances = 1)
+        r = self.c.pids('test')
+        self.assertEqual(len(r), 1)
+
+    def test_pids4(self):
+        self.c.start('test', ['/bin/sleep', '1'], instances = 4)
+        r = self.c.pids('test')
+        self.assertEqual(len(r), 4)
+
 class TestGetCommand(BaseTest):
     def test_get_args(self):
         self.c.start('test', ['/bin/sleep', '1'])
@@ -285,6 +302,9 @@ class TestInput2(BaseTest):
 
     def test_in_t15(self):
         self._send_garbage("SUBS")
+
+    def test_in_t16(self):
+        self._send_garbage("PIDS")
 
 class TestReplace(BaseTest):
     def test_stdout_replace(self):
