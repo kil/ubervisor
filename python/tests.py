@@ -495,7 +495,7 @@ class TestAsync(BaseTest):
             if r == c:
                 break
         self.assertEqual(msg['name'], 'test')
-        self.assertEqual(msg['status'], 0)
+        self.assertEqual(msg['status'], 4)
         while True:
             r, msg = self.c.wait()
             if r == c:
@@ -517,7 +517,7 @@ class TestAsync(BaseTest):
             if r == c:
                 break
         self.assertEqual(msg['name'], 'test')
-        self.assertEqual(msg['status'], 4)
+        self.assertEqual(msg['status'], 5)
 
 if __name__ == '__main__':
     start = environ.get("UBERVISOR_RUN", None)
