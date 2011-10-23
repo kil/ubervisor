@@ -90,7 +90,39 @@ static int			auto_dump,
  * prototypes
  */
 static void heartbeat_cb(int, short, void *);
-static int c_dump(struct client_con *);
+
+static int c_dele(struct client_con *, char *);
+static int c_dump(struct client_con *, char *);
+static int c_exit(struct client_con *, char *);
+static int c_getc(struct client_con *, char *);
+static int c_helo(struct client_con *, char *);
+static int c_kill(struct client_con *, char *);
+static int c_list(struct client_con *, char *);
+static int c_pids(struct client_con *, char *);
+static int c_spwn(struct client_con *, char *);
+static int c_subs(struct client_con *, char *);
+static int c_updt(struct client_con *, char *);
+
+typedef int (*cfunc_t)(struct client_con *, char *);
+
+struct commands_s {
+	char		*c_name;
+	cfunc_t		c_func;
+};
+
+struct commands_s commands[] = {
+	{"DELE",	c_dele},
+	{"DUMP",	c_dump},
+	{"EXIT",	c_exit},
+	{"GETC",	c_getc},
+	{"HELO",	c_helo},
+	{"KILL",	c_kill},
+	{"LIST",	c_list},
+	{"PIDS",	c_pids},
+	{"SPWN",	c_spwn},
+	{"SUBS",	c_subs},
+	{"UPDT",	c_updt},
+};
 
 /*
  * if there are more then (ERROR_MAX * instances) spawn errors over
@@ -619,7 +651,7 @@ send_status_msg(struct client_con *con, int code, const char *msg)
  * list command handler.
  */
 static int
-c_list(struct client_con *con)
+c_list(struct client_con *con, char *unused __attribute__((unused)))
 {
 	json_object		*obj,
 				*p;
@@ -704,7 +736,7 @@ c_spwn(struct client_con *con, char *buf)
 	if (!auto_dump)
 		send_status_msg(con, 1, "success");
 	else
-		c_dump(con);
+		c_dump(con, NULL);
 
 	slog("[start] creating group %s\n", cc->cc_name);
 	send_status_update_notification(cc->cc_name, STATUS_CREATE);
@@ -850,7 +882,7 @@ c_updt(struct client_con *con, char *buf)
 	if (!auto_dump)
 		send_status_msg(con, 1, "success");
 	else
-		c_dump(con);
+		c_dump(con, NULL);
 	return 1;
 }
 
@@ -858,7 +890,7 @@ c_updt(struct client_con *con, char *buf)
  * exit command handler.
  */
 static int
-c_exit(struct client_con *con)
+c_exit(struct client_con *con, char *unused __attribute__((unused)))
 {
 	if (!allow_exit) {
 		send_status_msg(con, 0, "prohibited");
@@ -868,7 +900,7 @@ c_exit(struct client_con *con)
 	if (!auto_dump)
 		send_status_msg(con, 1, "exiting");
 	else
-		c_dump(con);
+		c_dump(con, NULL);
 	slog("server exiting due to exit command.\n");
 	exit(0);
 	return 1;
@@ -878,7 +910,7 @@ c_exit(struct client_con *con)
  * dump command handler.
  */
 static int
-c_dump(struct client_con *con)
+c_dump(struct client_con *con, char *unused __attribute__((unused)))
 {
 	static int		cnt = 0;
 	struct child_config	*i;
@@ -1423,6 +1455,29 @@ c_pids(struct client_con *con, char *buf)
 }
 
 /*
+ * respond to helo command.
+ */
+static int
+c_helo(struct client_con *con, char *buf)
+{
+	if (bufferevent_write(con->c_be, "HELO", 4) == -1)
+		slog("HELO failed.\n");
+	return 1;
+}
+
+/*
+ * find command to run.
+ */
+static int
+command_compar(const void *a, const void *b)
+{
+	const char		*cmd = a;
+	const struct commands_s	*s = b;
+	return strncmp(cmd, s->c_name, 4);
+}
+
+
+/*
  * Execute command.
  */
 static int
@@ -1430,41 +1485,19 @@ run_server_command(char *buf, struct client_con *c)
 {
 	int			cr = 0;
 	char			*cmd_buf;
+	struct commands_s	*s;
 
-	/* alive check */
-	if (!strcmp(buf, "HELO")) {
-		if (bufferevent_write(c->c_be, "HELO", 4) == -1)
-			slog("HELO failed.\n");
-		return 1;
+
+	s = bsearch(buf, commands, sizeof(commands) / sizeof(struct commands_s),
+			sizeof(struct commands_s), command_compar);
+	if (s) {
+		cmd_buf = buf + 4;
+		cr = s->c_func(c, cmd_buf);
 	}
 
-	/* commands without payload */
-	if (!strcmp(buf, "EXIT")) {
-		return c_exit(c);
-	} else if (!strcmp(buf, "LIST")) {
-		return c_list(c);
-	} else if (!strcmp(buf, "DUMP")) {
-		return c_dump(c);
-	}
-
-	cmd_buf = buf + 4;
-
-	if (!strncmp(buf, "SPWN", 4))
-		cr = c_spwn(c, cmd_buf);
-	else if (!strncmp(buf, "DELE", 4))
-		cr = c_dele(c, cmd_buf);
-	else if (!strncmp(buf, "KILL", 4))
-		cr = c_kill(c, cmd_buf);
-	else if (!strncmp(buf, "UPDT", 4))
-		cr = c_updt(c, cmd_buf);
-	else if (!strncmp(buf, "GETC", 4))
-		cr = c_getc(c, cmd_buf);
-	else if (!strncmp(buf, "SUBS", 4))
-		cr = c_subs(c, cmd_buf);
-	else if (!strncmp(buf, "PIDS", 4))
-		cr = c_pids(c, cmd_buf);
 	if (!cr)
 		drop_client_connection(c);
+
 	return cr;
 }
 

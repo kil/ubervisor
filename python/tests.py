@@ -261,6 +261,7 @@ class TestInput2(BaseTest):
     def _send_garbage(self, p):
         if SEND_GARBAGE:
             pl = [
+                '',
                 "'name'",
                 "{'name'",
                 "{'name': 'test', 'stdin':",
@@ -305,6 +306,9 @@ class TestInput2(BaseTest):
 
     def test_in_t16(self):
         self._send_garbage("PIDS")
+
+    def test_in_t17(self):
+        self._send_garbage("XXXX") # unknown command
 
 class TestReplace(BaseTest):
     def test_stdout_replace(self):
