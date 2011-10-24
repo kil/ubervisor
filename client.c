@@ -388,6 +388,7 @@ cmd_kill(int argc, char **argv)
 	json_object_put(n);
 
 	if (ret == 0) {
+		fprintf(stderr, "Command failed.\n");
 		close(sock);
 		return 1;
 	}
