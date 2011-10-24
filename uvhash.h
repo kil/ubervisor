@@ -29,6 +29,7 @@
 #define __UVHASH_H
 
 #include <stdio.h>
+#include <stdint.h>
 
 #include "config.h"
 
