@@ -38,15 +38,13 @@
 #endif
 
 #include "process.h"
+#include "child_config.h"
 
-
-struct process_list	process_list_head;
 uvhash_t		*process_hash;
 
 void
 process_insert(struct process *p)
 {
-	LIST_INSERT_HEAD(&process_list_head, p, p_ent);
 	uvhash_insert(process_hash, p->p_pid, p);
 }
 
@@ -59,21 +57,12 @@ process_find_by_pid(pid_t pid)
 struct process *
 process_find_instance(struct child_config *cc, int i)
 {
-	struct process	*p;
-
-	p = LIST_FIRST(&process_list_head);
-	while (p != NULL) {
-		if (p->p_child_config == cc && p->p_instance == i)
-			return p;
-		p = LIST_NEXT(p, p_ent);
-	}
-	return NULL;
+	return cc->cc_childs[i];
 }
 
 void
 process_remove(struct process *p)
 {
-	LIST_REMOVE(p, p_ent);
 	uvhash_remove(process_hash, p->p_pid);
 }
 

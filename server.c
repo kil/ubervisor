@@ -1787,7 +1787,6 @@ cmd_server(int argc, char **argv)
 	auto_dump = 0;
 	allow_exit = 1;
 	log_fd = stdout;
-	LIST_INIT(&process_list_head);
 	LIST_INIT(&child_config_list_head);
 	LIST_INIT(&client_con_list_head);
 	process_hash = uvhash_new(16);

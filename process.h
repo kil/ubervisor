@@ -42,7 +42,6 @@
 #include "uvhash.h"
 
 struct process {
-	LIST_ENTRY(process)	p_ent;
 	pid_t			p_pid;
 	time_t			p_start;
 	struct child_config	*p_child_config;
@@ -50,9 +49,6 @@ struct process {
 	struct event		p_heartbeat_timer;
 };
 
-LIST_HEAD(process_list, process);
-
-extern struct process_list	process_list_head;
 extern uvhash_t			*process_hash;
 
 void process_insert(struct process *);
