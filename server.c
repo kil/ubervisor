@@ -1384,21 +1384,25 @@ c_pids(struct client_con *con, char *buf)
 
 	if (!json_object_is_type(obj, json_type_object)) {
 		send_status_msg(con, 0, "failure");
+		json_object_put(obj);
 		return 0;
 	}
 
 	if ((m = json_object_object_get(obj, "name")) == NULL) {
 		send_status_msg(con, 0, "failure");
+		json_object_put(obj);
 		return 0;
 	}
 
 	if (!json_object_is_type(m, json_type_string)) {
 		send_status_msg(con, 0, "failure");
+		json_object_put(obj);
 		return 0;
 	}
 
 	if ((n = json_object_get_string(m)) == NULL) {
 		send_status_msg(con, 0, "failure");
+		json_object_put(obj);
 		return 0;
 	}
 
