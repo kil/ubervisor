@@ -353,7 +353,7 @@ class UbervisorClient(object):
             d['stdout'] = stdout
         if stderr:
             d['stderr'] = stderr
-        if instances:
+        if instances != None:
             d['instances'] = instances
         if status:
             d['status'] = status

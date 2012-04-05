@@ -353,6 +353,22 @@ class TestUpdateCommand(BaseTest):
         r = self.c.kill('test')
         self.assertEqual(len(r), 1)
 
+    def test_instances_decrease_zero(self):
+        self.c.start('test', ['/bin/sleep', '1'], instances = 3)
+        self.assertRaises(UbervisorClientException, self.c.update, 'test',
+                instances = 0)
+        r = self.c.kill('test')
+        self.assertEqual(len(r), 3)
+
+    def test_instances_increase_stopped(self):
+        self.c.start('test', ['/bin/sleep', '1'], status = 2, instances = 1)
+        self.c.update('test', instances = 3)
+        r = self.c.kill('test')
+        self.assertEqual(len(r), 0)
+        self.c.update('test', status = 1)
+        r = self.c.kill('test')
+        self.assertEqual(len(r), 3)
+
     def test_status_start(self):
         self.c.start('test', ['/bin/sleep', '1'], status = STATUS_STOPPED)
         r = self.c.kill('test')

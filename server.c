@@ -796,6 +796,13 @@ c_updt(struct client_con *con, char *buf)
 		return 1;
 	}
 
+	if (cc->cc_instances != -1 && cc->cc_instances < 1) {
+		printf("the error\n");
+		send_status_msg(con, 0, "instances > 0 required.");
+		child_config_free(cc);
+		return 1;
+	}
+
 	if (cc->cc_dir != NULL) {
 		slog("[update] dir \"%s\" -> \"%s\"\n", up->cc_dir,
 				cc->cc_dir);
@@ -848,8 +855,13 @@ c_updt(struct client_con *con, char *buf)
 					sizeof(struct process *) * cc->cc_instances);
 			i = up->cc_instances;
 			up->cc_instances = cc->cc_instances;
-			for (; i < up->cc_instances; i++)
-				spawn(up, i);
+			for (; i < up->cc_instances; i++) {
+				if (up->cc_status == STATUS_RUNNING) {
+					spawn(up, i);
+				} else {
+					up->cc_childs[i] = NULL;
+				}
+			}
 		} else {
 			/* XXX: maybe return pids for cc->cc_instances > up->cc_instances */
 			for (i = cc->cc_instances; i < up->cc_instances; i++) {
