@@ -179,6 +179,7 @@ help_server(void)
 static void
 drop_client_connection(struct client_con *c)
 {
+	bufferevent_disable(c->c_be, EV_READ | EV_WRITE);
 	bufferevent_free(c->c_be);
 	close(c->c_sock);
 	subscription_remove_for_client(c);
