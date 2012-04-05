@@ -797,7 +797,6 @@ c_updt(struct client_con *con, char *buf)
 	}
 
 	if (cc->cc_instances != -1 && cc->cc_instances < 1) {
-		printf("the error\n");
 		send_status_msg(con, 0, "instances > 0 required.");
 		child_config_free(cc);
 		return 1;
