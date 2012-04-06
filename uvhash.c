@@ -42,7 +42,7 @@ hash_uint(uint32_t x)
 
 
 static inline uint32_t
-hash_str(char *x)
+hash_str(const char *x)
 {
 #if 0
 	uint32_t	i,
@@ -182,7 +182,7 @@ uvstrhash_insert(uvstrhash_t *h, char *k, void *v)
 }
 
 void *
-uvstrhash_find(uvstrhash_t *h, char *k)
+uvstrhash_find(uvstrhash_t *h, const char *k)
 {
 	struct uvstrhash_ent_list	*l;
 	struct uvstrhash_ent_s		*ent;
@@ -196,7 +196,7 @@ uvstrhash_find(uvstrhash_t *h, char *k)
 }
 
 void
-uvstrhash_remove(uvstrhash_t *h, char *k)
+uvstrhash_remove(uvstrhash_t *h, const char *k)
 {
 	struct uvstrhash_ent_list	*l;
 	struct uvstrhash_ent_s		*ent;

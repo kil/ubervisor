@@ -17,3 +17,5 @@ _CPack_Packages
 CPackConfig.cmake
 CPackSourceConfig.cmake
 *.deb
+*.rpm
+*.tar.gz

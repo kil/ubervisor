@@ -83,8 +83,8 @@ typedef struct uvstrhash_s		uvstrhash_t;
 
 uvstrhash_t *uvstrhash_new(int);
 void uvstrhash_insert(uvstrhash_t *, char *, void *);
-void uvstrhash_remove(uvstrhash_t *, char *);
-void *uvstrhash_find(uvstrhash_t *, char *);
+void uvstrhash_remove(uvstrhash_t *, const char *);
+void *uvstrhash_find(uvstrhash_t *, const char *);
 void uvstrhash_bucket_fill(uvstrhash_t *, FILE *);
 
 #endif /* __UVHASH_H */

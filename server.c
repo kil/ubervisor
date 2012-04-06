@@ -106,7 +106,7 @@ static int c_updt(struct client_con *, char *);
 typedef int (*cfunc_t)(struct client_con *, char *);
 
 struct commands_s {
-	char		*c_name;
+	char		c_name[4];
 	cfunc_t		c_func;
 };
 
@@ -1474,7 +1474,7 @@ c_pids(struct client_con *con, char *buf)
  * respond to helo command.
  */
 static int
-c_helo(struct client_con *con, char *buf)
+c_helo(struct client_con *con, char *unused __attribute__((unused)))
 {
 	if (bufferevent_write(con->c_be, "HELO", 4) == -1)
 		slog("HELO failed.\n");

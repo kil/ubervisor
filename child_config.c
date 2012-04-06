@@ -249,7 +249,7 @@ child_config_insert(struct child_config *cc)
 struct child_config *
 child_config_find_by_name(const char *n)
 {
-	return uvstrhash_find(child_config_hash, (char *) n);
+	return uvstrhash_find(child_config_hash, n);
 }
 
 /*
