@@ -78,6 +78,7 @@ help(void)
 	printf("\tread\t read from log file.\n");
 	printf("\tserver\t start the server\n");
 	printf("\tstart\t start a program\n");
+	printf("\tsubs\t subscribe to server events.\n");
 	printf("\tupdate\t modify a group\n");
 	printf("\n");
 	printf("`ubervisor <command> -h` to get a list of supported options.\n");
