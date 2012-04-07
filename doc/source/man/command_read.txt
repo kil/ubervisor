@@ -1,0 +1,28 @@
+==============
+ubervisor-read
+==============
+
+Synopsis
+========
+
+``ubervisor`` *read* ``[options]`` *ident*
+
+Description
+===========
+
+Read from log file of an instance in a group.
+
+Options
+=======
+
+-b, --bytes COUNT               read COUNT bytes from log file (default: 1024).
+-i, --instance INST             instance id (default: 0).
+-o, --offset OFF                offset to start reading at. -1 means *bytes*
+                                before end of file (default: -1).
+-s, --stream STREAM             stream to read. 1 = stdout, 2 = stderr (default: 1).
+
+See Also
+========
+:manpage:`ubervisor(1)`
+
+.. vim:spell:ft=rst

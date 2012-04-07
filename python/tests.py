@@ -59,6 +59,7 @@ class BaseTest(TestCase):
         self.c.update = _sleep_monkey(self.c.update)
         self.c.start = _sleep_monkey(self.c.start)
         self.c.kill = _sleep_monkey(self.c.kill)
+        self.c.read = _sleep_monkey(self.c.read)
         self.tmpdir = t = mkdtemp()
         self.tmpfile = path.join(t, 'tmpfile')
         self.reltmpfile = 'ubervisor_test_reltmpfile'
@@ -435,6 +436,49 @@ class TestListCommand(BaseTest):
         self.c.delete('test2')
         r = self.c.list()
         self.assertEquals(r, ['test'])
+
+class TestRead(BaseTest):
+
+    cmd = path.join(path.dirname(path.abspath(__file__)), 'sleep_echo.sh')
+
+    def test_read_no_log(self):
+        self.c.start('test', [self.cmd])
+        self.assertRaises(UbervisorClientException, self.c.read, 'test', 1)
+        self.c.delete('test')
+
+    def test_read_eof_0(self):
+        # read from end of file - more bytes then file has
+        self.c.start('test', [self.cmd], stdout = self.tmpfile)
+        r = self.c.read('test', 1, bytes = 1024)
+        self.assertEquals(r['code'], True)
+        self.assertLess(len(r['log']), 1024)
+        self.c.delete('test')
+
+    def test_read_eof_1(self):
+        # read from end of file
+        self.c.start('test', [self.cmd], stdout = self.tmpfile)
+        r = self.c.read('test', 1, bytes = 1)
+        self.assertEquals(r['code'], True)
+        self.assertEquals(len(r['log']), 1)
+        self.c.delete('test')
+
+    def test_read_sof(self):
+        self.c.start('test', [self.cmd], stdout = self.tmpfile)
+        r = self.c.read('test', 1, off = 0, bytes = 1)
+        self.assertEquals(r['code'], True)
+        self.assertEquals(len(r['log']), 1)
+        self.c.delete('test')
+
+    def test_read_fsize(self):
+        # fsize update
+        self.c.start('test', [self.cmd], stdout = self.tmpfile)
+        r = self.c.read('test', 1, off = 0, bytes = 1)
+        s1 = r['fsize']
+        sleep(0.2)
+        r = self.c.read('test', 1, off = 0, bytes = 1)
+        s2 = r['fsize']
+        self.assertGreater(s2, s1)
+        self.c.delete('test')
 
 
 class TestInt(BaseTest):

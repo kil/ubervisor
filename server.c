@@ -102,6 +102,7 @@ static int c_pids(struct client_con *, char *);
 static int c_spwn(struct client_con *, char *);
 static int c_subs(struct client_con *, char *);
 static int c_updt(struct client_con *, char *);
+static int c_read(struct client_con *, char *);
 
 typedef int (*cfunc_t)(struct client_con *, char *);
 
@@ -119,6 +120,7 @@ struct commands_s commands[] = {
 	{"KILL",	c_kill},
 	{"LIST",	c_list},
 	{"PIDS",	c_pids},
+	{"READ",	c_read},
 	{"SPWN",	c_spwn},
 	{"SUBS",	c_subs},
 	{"UPDT",	c_updt},
@@ -1478,6 +1480,229 @@ c_helo(struct client_con *con, char *unused __attribute__((unused)))
 {
 	if (bufferevent_write(con->c_be, "HELO", 4) == -1)
 		slog("HELO failed.\n");
+	return 1;
+}
+
+/*
+ * read from stdout/stderr of a child.
+ * (XXX: should read nonblocking).
+ */
+static int
+c_read(struct client_con *con, char *buf)
+{
+	json_object		*obj,
+				*m;
+
+	const char		*ret;
+	ssize_t			ret_len;
+	uint16_t		len;
+
+	double			doff;
+
+	off_t			off,
+				fsize;
+
+	int			stream,
+				bytes,
+				instance,
+				fd,
+				r;
+
+	char			instance_str[5];
+
+	const char		*n;
+	char			*fn = NULL,
+				readbuf[16384];
+
+	struct child_config	*cc;
+
+
+	if ((obj = json_tokener_parse(buf)) == NULL) {
+		send_status_msg(con, 0, "failure");
+		return 0;
+	}
+
+	if (is_error(obj)) {
+		send_status_msg(con, 0, "failure");
+		return 0;
+	}
+
+	if (!json_object_is_type(obj, json_type_object)) {
+		send_status_msg(con, 0, "failure");
+		json_object_put(obj);
+		return 0;
+	}
+
+	if ((m = json_object_object_get(obj, "name")) == NULL) {
+		send_status_msg(con, 0, "failure");
+		json_object_put(obj);
+		return 0;
+	}
+
+	if (!json_object_is_type(m, json_type_string)) {
+		send_status_msg(con, 0, "failure");
+		json_object_put(obj);
+		return 0;
+	}
+
+	if ((n = json_object_get_string(m)) == NULL) {
+		send_status_msg(con, 0, "failure");
+		json_object_put(obj);
+		return 0;
+	}
+
+	if ((m = json_object_object_get(obj, "stream")) == NULL) {
+		send_status_msg(con, 0, "failure");
+		json_object_put(obj);
+		return 0;
+	}
+
+	if (!json_object_is_type(m, json_type_int)) {
+		send_status_msg(con, 0, "failure");
+		json_object_put(obj);
+		return 0;
+	}
+
+	stream = json_object_get_int(m);
+
+	if ((m = json_object_object_get(obj, "offset")) == NULL) {
+		send_status_msg(con, 0, "failure");
+		json_object_put(obj);
+		return 0;
+	}
+
+	/* json-c has only int and double as number types. If we used int
+	 * here, we couldn't lseek past 2GB.
+	 */
+	if (!json_object_is_type(m, json_type_double)) {
+		send_status_msg(con, 0, "failure");
+		json_object_put(obj);
+		return 0;
+	}
+
+	doff = json_object_get_double(m);
+	off = (off_t) doff;
+
+	if ((m = json_object_object_get(obj, "bytes")) == NULL) {
+		send_status_msg(con, 0, "failure");
+		json_object_put(obj);
+		return 0;
+	}
+
+	if (!json_object_is_type(m, json_type_int)) {
+		send_status_msg(con, 0, "failure");
+		json_object_put(obj);
+		return 0;
+	}
+
+	bytes = json_object_get_int(m);
+
+	if ((m = json_object_object_get(obj, "instance")) == NULL) {
+		send_status_msg(con, 0, "failure");
+		json_object_put(obj);
+		return 0;
+	}
+
+	if (!json_object_is_type(m, json_type_int)) {
+		send_status_msg(con, 0, "failure");
+		json_object_put(obj);
+		return 0;
+	}
+
+	instance = json_object_get_int(m);
+
+	if ((stream < 1 || stream > 2) \
+			|| (bytes < 0 || bytes > (int) (sizeof(readbuf) - 1))) {
+		send_status_msg(con, 0, "parameters out of bounds.");
+		return 0;
+	}
+
+	if ((cc = child_config_find_by_name(n)) == NULL) {
+		send_status_msg(con, 0, "no such group.");
+		return 1;
+	}
+
+	json_object_put(obj);
+
+	if (instance < 0 || instance >= cc->cc_instances) {
+		send_status_msg(con, 0, "instance out of bounds.");
+		return 1;
+	}
+
+	snprintf(instance_str, sizeof(instance_str), "%d", instance);
+	if (stream == 1) {
+		if (cc->cc_stdout)
+			fn = xstrdup(cc->cc_stdout);
+	} else if (stream == 2) {
+		if (cc->cc_stderr)
+			fn = xstrdup(cc->cc_stderr);
+	}
+
+	if (!fn) {
+		send_status_msg(con, 0, "stream is not logged.");
+		return 1;
+	}
+
+	replace_str(fn, "%(NUM)", instance_str);
+
+	/* file may not exist. when starting a new group and reading
+	 * immediately, the file may not be there, yet.
+	 */
+	fd = open(fn, O_RDONLY);
+	free(fn);
+
+	if (fd == -1) {
+		send_status_msg(con, 0, "can't open logfile.");
+		return 1;
+	}
+
+	fsize = lseek(fd, 0, SEEK_END);
+	if (off < 0)
+		off = lseek(fd, -bytes, SEEK_END);
+	else
+		off = lseek(fd, off, SEEK_SET);
+
+	if ((r = read(fd, readbuf, bytes)) == -1) {
+		send_status_msg(con, 0, "read failed.");
+		return 1;
+	}
+
+	close(fd);
+	readbuf[r] = '\0';
+
+	/* construct reply */
+	obj = json_object_new_object();
+
+	m = json_object_new_boolean(1);
+	json_object_object_add(obj, "code", m);
+
+	m = json_object_new_string(readbuf);
+	json_object_object_add(obj, "log", m);
+
+	m = json_object_new_double((double) off);
+	json_object_object_add(obj, "offset", m);
+
+	m = json_object_new_double((double) fsize);
+	json_object_object_add(obj, "fsize", m);
+
+	ret = json_object_to_json_string(obj);
+	ret_len = strlen(ret);
+
+	len = htons(ret_len);
+
+	if (bufferevent_write(con->c_be, &len, sizeof(uint16_t)) == -1) {
+		slog("write failed in c_read (len)\n");
+	}
+
+	if (bufferevent_write(con->c_be, &con->c_cid, sizeof(uint16_t)) == -1) {
+		slog("write failed in c_read\n");
+	}
+
+	if (bufferevent_write(con->c_be, ret, ret_len) == -1) {
+		slog("write failed in c_read\n");
+	}
+
+	json_object_put(obj);
 	return 1;
 }
 

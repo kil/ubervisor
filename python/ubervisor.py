@@ -384,3 +384,28 @@ class UbervisorClient(object):
         if r['code'] != True:
             raise UbervisorClientException(r['msg'])
         return x
+
+    def read(self, name, stream, off = -1, instance = 0, bytes = 1024, wait = True):
+        """
+        Read from logfile.
+
+        :param str name:        name of the process group.
+        :param int instance:    id of an instance in the group.
+        :param int stream:      id of the stream to read: 1 = stdout,
+                                2 = stderr.
+        :param int off:         offset in bytes in log file. -1 = from end of
+                                file.
+        :param int bytes:       number of bytes to read from file.
+        """
+        d = dumps(dict(name = name,
+                stream = stream,
+                offset = float(off),
+                bytes = bytes,
+                instance = instance))
+        x = self._send('READ', d)
+        if not wait:
+            return x
+        r = self._reply(x)
+        if r['code'] != True:
+            raise UbervisorClientException(r['msg'])
+        return r

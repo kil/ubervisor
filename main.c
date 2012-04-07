@@ -36,6 +36,7 @@
 #include "cmd_get.h"
 #include "cmd_proxy.h"
 #include "cmd_subscribe.h"
+#include "cmd_read.h"
 
 #ifdef DEBUG
 #define DEBUG_VERSION	"-debug"
@@ -74,6 +75,7 @@ help(void)
 	printf("\tlist\t list groups.\n");
 	printf("\tpids\t get pids of processes in a group.\n");
 	printf("\tproxy\t multiplex stdin/out to socket.\n");
+	printf("\tread\t read from log file.\n");
 	printf("\tserver\t start the server\n");
 	printf("\tstart\t start a program\n");
 	printf("\tupdate\t modify a group\n");
@@ -122,6 +124,8 @@ main(int argc, char **argv)
 		ret = cmd_subscribe(argc, argv);
 	} else if (!strcmp(cmd, "pids")) {
 		ret = cmd_pids(argc, argv);
+	} else if (!strcmp(cmd, "read")) {
+		ret = cmd_read(argc, argv);
 	} else if (!strcmp(cmd, "-v") || !strcmp(cmd, "-V")) {
 		print_version();
 	} else {
