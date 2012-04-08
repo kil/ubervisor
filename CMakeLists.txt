@@ -31,7 +31,13 @@ CMAKE_POLICY(SET CMP0005 OLD)
 SET(VERSION_MAJOR 0)
 SET(VERSION_MINOR 0)
 SET(VERSION_BUILD 1)
-SET(VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_BUILD}")
+IF(NOT IS_DIRECTORY ${CMAKE_SOURCE_DIR}/.git)
+	SET(VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_BUILD}")
+ELSE()
+	EXEC_PROGRAM(git ${CMAKE_CURRENT_SOURCE_DIR} ARGS rev-parse --short -q HEAD
+		OUTPUT_VARIABLE COMMIT)
+	SET(VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_BUILD}-${COMMIT}")
+ENDIF()
 
 PROJECT(ubervisor C)
 INCLUDE(CheckIncludeFiles)
@@ -44,15 +50,14 @@ FIND_PACKAGE(jsonc REQUIRED)
 
 ADD_DEFINITIONS("-DUV_VERSION=\\\"${VERSION}\\\"")
 
-IF(UV_DEBUG)
-	MESSAGE(STATUS "debug build")
-	ADD_DEFINITIONS("-Wall -Wextra -g -ggdb -DDEBUG -Wunused -Wcast-align
-			-Wcast-qual -Wchar-subscripts -Wnested-externs
-			-Wpointer-arith -Wbad-function-cast -Wredundant-decls
-			-Wshadow -Wstrict-prototypes -Wwrite-strings")
-ELSE(UV_DEBUG)
-	ADD_DEFINITIONS("-Wall -O2")
-ENDIF(UV_DEBUG)
+IF(CMAKE_BUILD_TYPE STREQUAL "")
+	set (CMAKE_BUILD_TYPE Release CACHE STRING "build types: Debug Release." FORCE)
+ENDIF()
+
+SET (CMAKE_C_FLAGS "")
+SET (CMAKE_C_FLAGS_RELEASE "-Wall -O2 -DNDEBUG")
+SET (CMAKE_C_FLAGS_DEBUG "-Wall -Wextra -g -ggdb -DDEBUG -Wunused -Wcast-align -Wcast-qual -Wchar-subscripts -Wnested-externs -Wpointer-arith -Wbad-function-cast -Wredundant-decls -Wshadow -Wstrict-prototypes -Wwrite-strings")
+
 IF(CLANG_ANALYZE)
 	ADD_DEFINITIONS("--analyze")
 ENDIF(CLANG_ANALYZE)

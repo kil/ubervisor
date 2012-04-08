@@ -14,8 +14,8 @@ Useful cmake flags
 ------------------
 -DCMAKE_C_COMPILER:string=clang			(force compiler)
 -DCMAKE_INSTALL_PREFIX:string=/usr/local	(install prefix)
+-DCMAKE_BUILD_TYPE=Debug			(set build type)
 
 Debugging
 ---------
-delete CMakeCache.txt (!) and run cmake with `-DUV_DEBUG:bool=true` and
-recomplile. To do a clang --analyze build, use `-DCLANG_ANALYZE:bool=true`.
+To do a clang --analyze build, use `-DCLANG_ANALYZE:bool=true`.
