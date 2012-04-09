@@ -37,6 +37,7 @@ from time import sleep
 from tempfile import mkdtemp
 from shutil import rmtree
 from subprocess import Popen, PIPE
+from socket import error as socket_error
 
 SEND_GARBAGE = True
 SLEEP_SEC = 0.02
@@ -602,6 +603,35 @@ class TestAsync(BaseTest):
                 break
         self.assertEqual(msg['name'], 'test')
         self.assertEqual(msg['status'], 5)
+
+
+class TestBigMsg(BaseTest):
+    def test_big_reply(self):
+        cmd = ['/bin/sleep', '1']
+        nam = 'test' * 256 + '-%d'
+        names = [nam % x for x in range(64)]
+        names.sort()
+        for x in names:
+            self.c.start(x, cmd, status = 2)
+        ret = self.c.list()
+        ret.sort()
+        self.assertEqual(names, ret)
+        for x in names:
+            self.c.delete(x)
+
+    def test_big_cmd(self):
+        cmd = ['/bin/sleep', '1']
+        x = 'a' * 4096
+        self.c.start(x, cmd, status = 2)
+        ret = self.c.list()
+        self.assertEqual([x], ret)
+        self.c.delete(x)
+
+    def test_too_big_cmd(self):
+        cmd = ['/bin/sleep', '1']
+        x = 'a' * (4096 * 4)
+        self.assertRaises(socket_error, self.c.start, x, cmd, status = 2)
+
 
 if __name__ == '__main__':
     start = environ.get("UBERVISOR_RUN", None)

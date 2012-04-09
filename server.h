@@ -28,6 +28,10 @@
 #ifndef __SERVER_H
 #define __SERVER_H
 
+#define CHUNKEXT		0x8000
+#define CHUNKRESERVED		0x4000
+#define CHUNKSIZ		0x3fff
+
 int cmd_server(int argc, char **argv);
 
 #endif /* __SERVER_H */

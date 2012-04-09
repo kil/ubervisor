@@ -37,6 +37,7 @@
 #include <grp.h>
 #include <errno.h>
 #include <limits.h>
+#include <assert.h>
 
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -58,6 +59,7 @@
 #include "subscription.h"
 #include "process.h"
 #include "uvhash.h"
+#include "server.h"
 
 #ifdef HAVE_SYS_QUEUE_H
 #include <sys/queue.h>
@@ -90,6 +92,7 @@ static int			auto_dump,
  * prototypes
  */
 static void heartbeat_cb(int, short, void *);
+static void slog(const char *, ...);
 
 static int c_dele(struct client_con *, char *);
 static int c_dump(struct client_con *, char *);
@@ -189,6 +192,45 @@ drop_client_connection(struct client_con *c)
 	free(c);
 }
 
+
+static int
+send_message(struct client_con *con, const char *ret, size_t ret_len)
+{
+	uint16_t		len;
+	size_t			r;
+	size_t			off = 0;
+
+
+	do {
+		if ((ret_len - off) > CHUNKSIZ) {
+			len = htons(CHUNKEXT | CHUNKSIZ);
+			r = CHUNKSIZ;
+		} else {
+			len = htons(ret_len - off);
+			r = ret_len - off;
+		}
+
+		if (bufferevent_write(con->c_be, &len, sizeof(uint16_t)) == -1) {
+			slog("write failed in send_message (len)\n");
+			return 0;
+		}
+
+		if (bufferevent_write(con->c_be, &con->c_cid, sizeof(uint16_t)) == -1) {
+			slog("write failed in send_message\n");
+			return 0;
+		}
+
+		if (bufferevent_write(con->c_be, ret + off, r) == -1) {
+			slog("write failed in send_message\n");
+			return 0;
+		}
+		off += r;
+	} while (off < ret_len);
+
+	return 1;
+}
+
+
 /*
  * send notification message to subscribed clients.
  */
@@ -201,6 +243,7 @@ send_notification(int n, const char *ret)
 	int			ret_len;
 
 	ret_len = strlen(ret);
+	assert(ret_len <= CHUNKSIZ);
 	len = htons(ret_len);
 
 	s = LIST_FIRST(&subscription_list_head);
@@ -617,7 +660,6 @@ send_status_msg(struct client_con *con, int code, const char *msg)
 {
 	const char		*ret;
 	ssize_t			ret_len;
-	uint16_t		len;
 	json_object		*obj,
 				*c,
 				*m;
@@ -633,19 +675,7 @@ send_status_msg(struct client_con *con, int code, const char *msg)
 	ret = json_object_to_json_string(obj);
 	ret_len = strlen(ret);
 
-	len = htons(ret_len);
-
-	if (bufferevent_write(con->c_be, &len, sizeof(uint16_t)) == -1) {
-		slog("write failed in send_status_msg (len)\n");
-	}
-
-	if (bufferevent_write(con->c_be, &con->c_cid, sizeof(uint16_t)) == -1) {
-		slog("write failed in send_status_msg\n");
-	}
-
-	if (bufferevent_write(con->c_be, ret, ret_len) == -1) {
-		slog("write failed in send_status_msg\n");
-	}
+	send_message(con, ret, ret_len);
 
 	json_object_put(obj);
 }
@@ -659,7 +689,6 @@ c_list(struct client_con *con, char *unused __attribute__((unused)))
 	json_object		*obj,
 				*p;
 	struct child_config	*i;
-	uint16_t		len;
 	const char		*ret;
 	ssize_t			ret_len;
 
@@ -683,20 +712,7 @@ c_list(struct client_con *con, char *unused __attribute__((unused)))
 	}
 
 	ret_len = strlen(ret);
-	len = htons(ret_len);
-
-	if (bufferevent_write(con->c_be, &len, sizeof(uint16_t)) == -1) {
-		slog("write failed in send_status_msg\n");
-	}
-
-	if (bufferevent_write(con->c_be, &con->c_cid, sizeof(uint16_t)) == -1) {
-		slog("write failed in send_status_msg\n");
-	}
-
-	if (bufferevent_write(con->c_be, ret, ret_len) == -1) {
-		slog("write failed in send_status_msg\n");
-	}
-
+	send_message(con, ret, ret_len);
 	json_object_put(obj);
 	return 1;
 }
@@ -1008,8 +1024,6 @@ c_kill(struct client_con *con, char *buf)
 
 	ssize_t			ret_len;
 
-	uint16_t		len;
-
 	struct child_config	*cc;
 	struct process		*i;
 
@@ -1097,21 +1111,8 @@ c_kill(struct client_con *con, char *buf)
 
 	ret = xstrdup(json_object_to_json_string(obj));
 	ret_len = strlen(ret);
-	len = htons(ret_len);
-
 	json_object_put(obj);
-
-	if (bufferevent_write(con->c_be, &len, sizeof(uint16_t)) == -1) {
-		slog("write failed in send_status_msg\n");
-	}
-
-	if (bufferevent_write(con->c_be, &con->c_cid, sizeof(uint16_t)) == -1) {
-		slog("write failed in send_status_msg\n");
-	}
-
-	if (bufferevent_write(con->c_be, ret, ret_len) == -1) {
-		slog("write failed in kill\n");
-	}
+	send_message(con, ret, ret_len);
 	free(ret);
 	return 1;
 }
@@ -1126,7 +1127,6 @@ c_dele(struct client_con *con, char *buf)
 	const char		*n;
 
 	ssize_t			ret_len;
-	uint16_t		len;
 
 	struct child_config	*cc;
 	struct process		*i;
@@ -1212,22 +1212,8 @@ c_dele(struct client_con *con, char *buf)
 
 	ret = xstrdup(json_object_to_json_string(obj));
 	ret_len = strlen(ret);
-	len = htons(ret_len);
-
 	json_object_put(obj);
-
-	if (bufferevent_write(con->c_be, &len, sizeof(uint16_t)) == -1) {
-		slog("write failed in send_status_msg\n");
-	}
-
-	if (bufferevent_write(con->c_be, &con->c_cid, sizeof(uint16_t)) == -1) {
-		slog("write failed in send_status_msg\n");
-	}
-
-	if (bufferevent_write(con->c_be, ret, ret_len) == -1) {
-		slog("write failed in kill\n");
-	}
-
+	send_message(con, ret, ret_len);
 	free(ret);
 	return 1;
 }
@@ -1242,7 +1228,6 @@ c_getc(struct client_con *con, char *buf)
 	const char		*n;
 
 	ssize_t			ret_len;
-	uint16_t		len;
 
 	struct child_config	*cc;
 
@@ -1294,19 +1279,7 @@ c_getc(struct client_con *con, char *buf)
 
 	ret = child_config_serialize(cc);
 	ret_len = strlen(ret);
-	len = htons(ret_len);
-
-	if (bufferevent_write(con->c_be, &len, sizeof(uint16_t)) == -1) {
-		slog("write failed in send_status_msg\n");
-	}
-
-	if (bufferevent_write(con->c_be, &con->c_cid, sizeof(uint16_t)) == -1) {
-		slog("write failed in send_status_msg\n");
-	}
-
-	if (bufferevent_write(con->c_be, ret, ret_len) == -1) {
-		slog("write failed in getc\n");
-	}
+	send_message(con, ret, ret_len);
 	free(ret);
 	return 1;
 }
@@ -1374,7 +1347,6 @@ c_pids(struct client_con *con, char *buf)
 	const char		*n;
 
 	ssize_t			ret_len;
-	uint16_t		len;
 
 	struct child_config	*cc;
 	struct process		*i;
@@ -1453,21 +1425,8 @@ c_pids(struct client_con *con, char *buf)
 
 	ret = xstrdup(json_object_to_json_string(obj));
 	ret_len = strlen(ret);
-	len = htons(ret_len);
-
 	json_object_put(obj);
-
-	if (bufferevent_write(con->c_be, &len, sizeof(uint16_t)) == -1) {
-		slog("write failed in pids\n");
-	}
-
-	if (bufferevent_write(con->c_be, &con->c_cid, sizeof(uint16_t)) == -1) {
-		slog("write failed in pids\n");
-	}
-
-	if (bufferevent_write(con->c_be, ret, ret_len) == -1) {
-		slog("write failed in pids\n");
-	}
+	send_message(con, ret, ret_len);
 	free(ret);
 	return 1;
 }
@@ -1495,7 +1454,6 @@ c_read(struct client_con *con, char *buf)
 
 	const char		*ret;
 	ssize_t			ret_len;
-	uint16_t		len;
 
 	double			doff;
 
@@ -1688,20 +1646,7 @@ c_read(struct client_con *con, char *buf)
 	ret = json_object_to_json_string(obj);
 	ret_len = strlen(ret);
 
-	len = htons(ret_len);
-
-	if (bufferevent_write(con->c_be, &len, sizeof(uint16_t)) == -1) {
-		slog("write failed in c_read (len)\n");
-	}
-
-	if (bufferevent_write(con->c_be, &con->c_cid, sizeof(uint16_t)) == -1) {
-		slog("write failed in c_read\n");
-	}
-
-	if (bufferevent_write(con->c_be, ret, ret_len) == -1) {
-		slog("write failed in c_read\n");
-	}
-
+	send_message(con, ret, ret_len);
 	json_object_put(obj);
 	return 1;
 }
@@ -1748,7 +1693,7 @@ run_server_command(char *buf, struct client_con *c)
 static void
 read_cb(struct bufferevent *b, void *cx)
 {
-	char			buf[BUFFER_SIZ];
+	char			buf[CHUNKSIZ];
 	uint16_t		len,
 				cid;
 	size_t			r;
@@ -1770,7 +1715,7 @@ read_cb(struct bufferevent *b, void *cx)
 
 			len = ntohs(len);
 
-			if (len > BUFFER_SIZ) {
+			if (len > CHUNKSIZ) {
 				slog("command payload too large.\n");
 				drop_client_connection(c);
 				return;
@@ -1784,7 +1729,7 @@ read_cb(struct bufferevent *b, void *cx)
 
 			c->c_len = len;
 			bufferevent_setwatermark(b, EV_READ, sizeof(uint16_t),
-					BUFFER_SIZ);
+					CHUNKSIZ);
 		}
 
 		/* read command cid */
@@ -1799,7 +1744,7 @@ read_cb(struct bufferevent *b, void *cx)
 				return;
 			}
 			c->c_cid = cid;
-			bufferevent_setwatermark(b, EV_READ, c->c_len, BUFFER_SIZ);
+			bufferevent_setwatermark(b, EV_READ, c->c_len, CHUNKSIZ);
 		}
 
 		/* read command name and payload */
@@ -1814,7 +1759,7 @@ read_cb(struct bufferevent *b, void *cx)
 			}
 
 			bufferevent_setwatermark(c->c_be, EV_READ, sizeof(uint16_t),
-					BUFFER_SIZ);
+					CHUNKSIZ);
 			c->c_len = 0;
 			buf[r] = '\0';
 			if (!run_server_command(buf, c))
@@ -1886,7 +1831,7 @@ accept_cb(int fd, short evtype, void *unused __attribute__((unused)))
 		return;
 	}
 
-	bufferevent_setwatermark(c->c_be, EV_READ, 4, BUFFER_SIZ);
+	bufferevent_setwatermark(c->c_be, EV_READ, 4, CHUNKSIZ);
 	LIST_INSERT_HEAD(&client_con_list_head, c, c_ent);
 }
 

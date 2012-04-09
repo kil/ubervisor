@@ -41,6 +41,9 @@ STATUS_BROKEN = 3
 
 UBERVISOR_CMD = '/usr/local/bin/ubervisor'
 
+CHUNKEXT = 0x8000
+CHUNKSIZ = 0x3fff
+
 class UbervisorClientException(Exception):
     pass
 
@@ -127,11 +130,15 @@ class UbervisorClient(object):
 
         :returns: ``(cid, payload)`` tuple.
         """
-        b = self.s.recv(4)
-        if len(b) != 4:
-            raise UbervisorClientException('reply error')
-        l, cid = unpack('!HH', b)
-        x = self.s.recv(l)
+        x = ''
+        while True:
+            b = self.s.recv(4)
+            if len(b) != 4:
+                raise UbervisorClientException('reply error')
+            l, cid = unpack('!HH', b)
+            x += self.s.recv(l & CHUNKSIZ)
+            if not (l & CHUNKEXT):
+                break
         try:
             return cid, loads(x)
         except ValueError:
