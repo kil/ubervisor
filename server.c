@@ -299,9 +299,9 @@ slog(const char *fmt, ...)
 {
 	va_list		ap;
 	char		ts_buf[64],
-			msg_buf[64],
-			out[128];
-	int		out_len;
+			msg_buf[BUFFER_SIZ],
+			out[BUFFER_SIZ];
+	int		r;
 	struct tm	*t;
 	time_t		tt;
 
@@ -310,13 +310,28 @@ slog(const char *fmt, ...)
 	strftime(ts_buf, sizeof(ts_buf), LOG_TS_FORMAT, t);
 
 	va_start(ap, fmt);
-	vsnprintf(msg_buf, sizeof(msg_buf), fmt, ap);
+	r = vsnprintf(msg_buf, BUFFER_SIZ, fmt, ap);
 	va_end(ap);
 
-	out_len = snprintf(out, sizeof(out), "%s -- %s", ts_buf, msg_buf);
-	if (out_len < 0)
+	if (r < 0) {
+		slog("slog failed.\n");
 		return;
-	fwrite(out, out_len, 1, log_fd);
+	}
+
+	r = snprintf(out, BUFFER_SIZ, "%s -- %s", ts_buf, msg_buf);
+
+	if (r < 0) {
+		slog("slog failed.\n");
+		return;
+	}
+
+	if (r >= BUFFER_SIZ) {
+		slog("too big log message is being truncated.\n");
+		r = BUFFER_SIZ;
+		out[BUFFER_SIZ - 2] = '\n';
+	}
+
+	fwrite(out, r, 1, log_fd);
 	send_log_notification(out);
 }
 
