@@ -32,6 +32,11 @@
 #define CHUNKRESERVED		0x4000
 #define CHUNKSIZ		0x3fff
 
+/*
+ * maximum instances per group.
+ */
+#define MAX_INSTANCES		1024
+
 int cmd_server(int argc, char **argv);
 
 #endif /* __SERVER_H */

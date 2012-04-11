@@ -836,6 +836,12 @@ c_updt(struct client_con *con, char *buf)
 		return 1;
 	}
 
+	if (cc->cc_instances > MAX_INSTANCES) {
+		send_status_msg(con, 0, "too many instances.");
+		child_config_free(cc);
+		return 1;
+	}
+
 	if (cc->cc_dir != NULL) {
 		slog("[update] dir \"%s\" -> \"%s\"\n", up->cc_dir,
 				cc->cc_dir);

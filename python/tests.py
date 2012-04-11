@@ -348,6 +348,11 @@ class TestUpdateCommand(BaseTest):
         r = self.c.kill('test')
         self.assertEqual(len(r), 3)
 
+    def test_instances_increase_too_many(self):
+        self.c.start('test', ['/bin/sleep', '1'], instances = 1)
+        self.assertRaises(UbervisorClientException, self.c.update, 'test',
+                instances = 1025)
+
     def test_instances_decrease(self):
         self.c.start('test', ['/bin/sleep', '1'], instances = 3)
         self.c.update('test', instances = 1)
