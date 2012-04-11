@@ -843,52 +843,54 @@ c_updt(struct client_con *con, char *buf)
 	}
 
 	if (cc->cc_dir != NULL) {
-		slog("[update] dir \"%s\" -> \"%s\"\n", up->cc_dir,
-				cc->cc_dir);
+		slog("[update] %s dir \"%s\" -> \"%s\"\n", up->cc_name,
+				up->cc_dir, cc->cc_dir);
 		if (up->cc_dir)
 			free(up->cc_dir);
 		up->cc_dir = xstrdup(cc->cc_dir);
 	}
 
 	if (cc->cc_heartbeat != NULL) {
-		slog("[update] heartbeat \"%s\" -> \"%s\"\n", up->cc_heartbeat,
-				cc->cc_heartbeat);
+		slog("[update] %s heartbeat \"%s\" -> \"%s\"\n", up->cc_name,
+				up->cc_heartbeat, cc->cc_heartbeat);
 		if (up->cc_heartbeat)
 			free(up->cc_heartbeat);
 		up->cc_heartbeat = xstrdup(cc->cc_heartbeat);
 	}
 
 	if (cc->cc_fatal_cb != NULL) {
-		slog("[update] fatal_cb \"%s\" -> \"%s\"\n", up->cc_fatal_cb,
-				cc->cc_fatal_cb);
+		slog("[update] %s fatal_cb \"%s\" -> \"%s\"\n", up->cc_name,
+				up->cc_fatal_cb, cc->cc_fatal_cb);
 		if (up->cc_fatal_cb)
 			free(up->cc_fatal_cb);
 		up->cc_fatal_cb = xstrdup(cc->cc_fatal_cb);
 	}
 
 	if (cc->cc_stdout != NULL) {
-		slog("[update] stdout \"%s\" -> \"%s\"\n", up->cc_stdout,
-				cc->cc_stdout);
+		slog("[update] %s stdout \"%s\" -> \"%s\"\n", up->cc_name,
+				up->cc_stdout, cc->cc_stdout);
 		if (up->cc_stdout != NULL)
 			free(up->cc_stdout);
 		up->cc_stdout = xstrdup(cc->cc_stdout);
 	}
 
 	if (cc->cc_stderr != NULL) {
-		slog("[update] stderr \"%s\" -> \"%s\"\n", up->cc_stderr,
-				cc->cc_stderr);
+		slog("[update] %s stderr \"%s\" -> \"%s\"\n", up->cc_name,
+				up->cc_stderr, cc->cc_stderr);
 		if (up->cc_stderr != NULL)
 			free(up->cc_stderr);
 		up->cc_stderr = xstrdup(cc->cc_stderr);
 	}
 
 	if (cc->cc_killsig != -1) {
-		slog("[update] killsig %d -> %d\n", up->cc_killsig, cc->cc_killsig);
+		slog("[update] %s killsig %d -> %d\n", up->cc_name,
+				up->cc_killsig, cc->cc_killsig);
 		up->cc_killsig = cc->cc_killsig;
 	}
 
 	if (cc->cc_instances != -1) {
-		slog("[update] instances %d -> %d\n", up->cc_instances, cc->cc_instances);
+		slog("[update] %s instances %d -> %d\n", up->cc_name,
+				up->cc_instances, cc->cc_instances);
 		if (cc->cc_instances > up->cc_instances) {
 			up->cc_childs = xrealloc(up->cc_childs,
 					sizeof(struct process *) * cc->cc_instances);
@@ -915,7 +917,8 @@ c_updt(struct client_con *con, char *buf)
 	}
 
 	if (cc->cc_status != -1) {
-		slog("[update] status %d -> %d\n", up->cc_status, cc->cc_status);
+		slog("[update] %s status %d -> %d\n", up->cc_name,
+				up->cc_status, cc->cc_status);
 		up->cc_error = 0;
 		if (up->cc_status != STATUS_RUNNING
 				&& cc->cc_status == STATUS_RUNNING) {
