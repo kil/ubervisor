@@ -71,7 +71,7 @@ class SSHSock(object):
             cs.close()
             return p, ps
 
-    def __init__(self, host, command, sshcmd = None):
+    def __init__(self, host, user, key, command, sshcmd = None):
         """
         Create new SSHSock.
 
@@ -83,6 +83,10 @@ class SSHSock(object):
             sshcmd = ['/usr/bin/ssh', '-T', '-a', '-x']
         self.pid = 0
         self.sock = None
+        if user:
+            sshcmd += ['-l', user]
+        if key:
+            sshcmd += ['-i', key]
         self.sshcmd, self.command = sshcmd + [host], command
 
     def connect(self):
@@ -155,15 +159,15 @@ class UbervisorClient(object):
             self.s = socket(AF_UNIX, SOCK_STREAM)
             self.s.connect(self.sock_file)
         else:
-            self.s = SSHSock(self.host, self.sock_cmd)
+            self.s = SSHSock(self.host, self.user, self.key, self.sock_cmd)
             self.s.connect()
 
         self._send('HELO')
         if self.s.recv(4) != 'HELO':
             raise UbervisorClientException("HELO failed")
 
-    def __init__(self, sock_file = None, host = None, command = [UBERVISOR_CMD,
-        'proxy']):
+    def __init__(self, sock_file = None, host = None, user = None, key = None,
+            command = [UBERVISOR_CMD, 'proxy']):
         """
         Create new client and connect to server. If neither ``sock_file`` nor
         ``command`` are specified, the default socket (``~/.uber/socket``) is
@@ -173,6 +177,10 @@ class UbervisorClient(object):
         :param str host:            host ubervisor server is running on. If set,
                                     use ssh with ``command`` to connect the
                                     server.
+        :param str user:            username to login as when using the ``host``
+                                    argument.
+        :param str key:             path to ssh private key, when using the
+                                    ``host`` argument.
         :param str command:         command to execute and whos stdin and stdout
                                     are use as the socket (equivalent to
                                     ``UBERVISOR_RSH`` environment variable of
@@ -184,6 +192,8 @@ class UbervisorClient(object):
             self.sock_cmd = None
         else:
             self.sock_file = None
+            self.user = user
+            self.key = key
             self.sock_cmd = command
         self.connect()
 
