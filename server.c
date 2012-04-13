@@ -764,6 +764,21 @@ c_spwn(struct client_con *con, char *buf)
 		return 1;
 	}
 
+	if (cc->cc_instances == -1)
+	       cc->cc_instances = 1;
+
+	if (cc->cc_instances < 1) {
+		send_status_msg(con, 0, "instances > 0 required.");
+		child_config_free(cc);
+		return 1;
+	}
+
+	if (cc->cc_instances > MAX_INSTANCES) {
+		send_status_msg(con, 0, "too many instances.");
+		child_config_free(cc);
+		return 1;
+	}
+
 	cc->cc_childs = xmalloc(sizeof(struct process *) * cc->cc_instances);
 	memset(cc->cc_childs, '\0', sizeof(struct process *) * cc->cc_instances);
 	child_config_insert(cc);

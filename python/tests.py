@@ -132,6 +132,15 @@ class TestStartCommand(BaseTest):
         self.assertEqual(len(r), 1)
         stat(path.join(self.tmpdir, self.reltmpfile))
 
+    def test_start_instances_err_0(self):
+        self.assertRaises(UbervisorClientException, self.c.start, 'test', ['/bin/sleep', '0.1'], instances = 0)
+
+    def test_start_instances_err_1(self):
+        self.assertRaises(UbervisorClientException, self.c.start, 'test', ['/bin/sleep', '0.1'], instances = -2)
+
+    def test_start_instances_err_2(self):
+        self.assertRaises(UbervisorClientException, self.c.start, 'test', ['/bin/sleep', '0.1'], instances = 1025)
+
     # heardbeat, fatal tested in TestInt
 
 
