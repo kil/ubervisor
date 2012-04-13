@@ -96,15 +96,13 @@ cmd_start(int argc, char **argv)
 	const char		*b;
 	int			sock;
 
-	char			s_out[] = "/dev/null",
-				s_err[] = "/dev/null";
 
 	if (argc < 2)
 		help_start();
 
 	cc = child_config_new();
-	cc->cc_stdout = s_out;
-	cc->cc_stderr = s_err;
+	cc->cc_stdout = NULL;
+	cc->cc_stderr = NULL;
 	cc->cc_instances = 1;
 	cc->cc_status = STATUS_RUNNING;
 	cc->cc_killsig = 15;
