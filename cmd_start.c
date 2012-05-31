@@ -36,9 +36,10 @@
 #include "misc.h"
 #include "child_config.h"
 
-static char start_opts[] = "+d:e:f:g:G:hH:i:k:o:s:u:U:";
+static char start_opts[] = "+a:d:e:f:g:G:hH:i:k:o:s:u:U:";
 
 static struct option start_longopts[] = {
+	{ "age",	required_argument,	NULL,	'a' },
 	{ "dir",	required_argument,	NULL,	'd' },
 	{ "stderr",	required_argument,	NULL,	'e' },
 	{ "fatal",	required_argument,	NULL,	'f' },
@@ -61,6 +62,7 @@ help_start(void)
 	printf("Usage: %s start [Options] <name> <command> [args]\n", program_name);
 	printf("\n");
 	printf("Options: (defaults in brackets)\n");
+	printf("\t-a, --age SEC         max process age in seconds (not set).\n");
 	printf("\t-d, --dir DIR         chdir to DIR (not set).\n");
 	printf("\t-e, --stderr FILE     stderr log FILE (/dev/null).\n");
 	printf("\t-f, --fatal COMMAND   command to run on fatal condition (not set).\n");
@@ -109,6 +111,9 @@ cmd_start(int argc, char **argv)
 
 	while ((ch = getopt_long(argc, argv, start_opts, start_longopts, NULL)) != -1) {
 		switch (ch) {
+		case 'a':
+			cc->cc_age = strtol(optarg, NULL, 10);
+			break;
 		case 'd':
 			cc->cc_dir = optarg;
 			break;

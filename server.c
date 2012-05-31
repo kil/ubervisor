@@ -542,6 +542,9 @@ spawn(struct child_config *cc, int instance)
 	p->p_pid = pid;
 	p->p_child_config = cc;
 	p->p_instance = instance;
+	p->p_start = time(NULL);
+	p->p_terminated = 0;
+	p->p_age = cc->cc_age;
 	schedule_heartbeat(p);
 	process_insert(p);
 	cc->cc_childs[instance] = p;
@@ -563,23 +566,35 @@ heartbeat_cb(int unused0 __attribute__((unused)),
 	char			*args[5],
 				pid_str[8],
 				inst_str[8];
+	time_t			uptime;
 
 	if (vp == NULL)
 		return;
 
 	p = vp;
+	schedule_heartbeat(p);
+	uptime = time(NULL) - p->p_start;
+
+	if (p->p_age > 0 && uptime > p->p_age) {
+		if (p->p_terminated) {
+			slog("pid %d exceeded uptime. Sending KILL\n", p->p_pid);
+			kill(p->p_pid, SIGKILL);
+			return;
+		}
+		slog("pid %d exceeded uptime. Sending TERM\n", p->p_pid);
+		kill(p->p_pid, SIGTERM);
+		p->p_terminated = 1;
+		return;
+	}
+
 	cc = p->p_child_config;
 
-	if (cc == NULL)
-		return;
-
-	if (cc->cc_heartbeat == NULL)
+	if (cc == NULL || cc->cc_heartbeat == NULL)
 		return;
 
 	snprintf(pid_str, sizeof(pid_str), "%d", p->p_pid);
 	snprintf(inst_str, sizeof(inst_str), "%d", p->p_instance);
 
-	schedule_heartbeat(p);
 	pid = fork();
 
 	if (pid == -1) {
@@ -944,6 +959,12 @@ c_updt(struct client_con *con, char *buf)
 		}
 		up->cc_status = cc->cc_status;
 		send_status_update_notification(up->cc_name, up->cc_status);
+	}
+
+	if (cc->cc_age > 0) {
+		slog("[update] %s age %d -> %d\n", up->cc_name,
+				up->cc_age, cc->cc_age);
+		up->cc_age = cc->cc_age;
 	}
 
 	child_config_free(cc);

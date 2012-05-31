@@ -199,7 +199,7 @@ class UbervisorClient(object):
 
     def start(self, name, args, dir = None, stdout = None, stderr = None,
             instances = 1, status = STATUS_RUNNING, killsig = 15, uid = -1,
-            gid = -1, heartbeat = None, fatal_cb = None, wait = True):
+            gid = -1, heartbeat = None, fatal_cb = None, age = None, wait = True):
         """
         Create a new process group and start it.
 
@@ -213,11 +213,13 @@ class UbervisorClient(object):
         :param int uid:         user id to run program as.
         :param int gid:         group id to run program as.
         :param str fatal_cb:    command to run on error conditions.
+        :param int age:         maximum runtime of a process in this group in
+                                seconds.
         :param bool wait:       if ``True``, wait for server reply.
         """
         d = dict(name = name, args = args,
             stderr = stderr, instances = instances, status = status,
-            killsig = killsig, uid = uid, gid = gid)
+            killsig = killsig, uid = uid, gid = gid, age = age)
         if dir:
             d['dir'] = dir
         if stdout:
@@ -226,6 +228,8 @@ class UbervisorClient(object):
             d['heartbeat'] = heartbeat
         if fatal_cb:
             d['fatal_cb'] = fatal_cb
+        if age != None:
+            d['age'] = age
 
         d = dumps(d)
         c = self._send('SPWN', d)
@@ -349,7 +353,7 @@ class UbervisorClient(object):
 
     def update(self, name, stdout = None, stderr = None,
             instances = None, status = None, killsig = None,
-            heartbeat = None, fatal_cb = None, wait = True):
+            heartbeat = None, fatal_cb = None, age = None, wait = True):
         """
         Create a new process group and start it.
 
@@ -380,6 +384,8 @@ class UbervisorClient(object):
             d['heartbeat'] = heartbeat
         if fatal_cb:
             d['fatal_cb'] = fatal_cb
+        if age != None:
+            d['age'] = age
         d = dumps(d)
         x = self._send('UPDT', d)
         if not wait:

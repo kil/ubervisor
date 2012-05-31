@@ -132,6 +132,12 @@ class TestStartCommand(BaseTest):
         self.assertEqual(len(r), 1)
         stat(path.join(self.tmpdir, self.reltmpfile))
 
+    def test_start_age(self):
+        self.c.start('test', ['/bin/sleep', '2'], dir = self.tmpdir,
+                stdout = self.reltmpfile, age = 10)
+        r = self.c.delete('test')
+        self.assertEqual(len(r), 1)
+
     def test_start_instances_err_0(self):
         self.assertRaises(UbervisorClientException, self.c.start, 'test', ['/bin/sleep', '0.1'], instances = 0)
 
@@ -426,6 +432,14 @@ class TestUpdateCommand(BaseTest):
         self.c.update('test', heartbeat = '/bin/echo')
         r = self.c.get('test')
         self.assertEqual(r.get('heartbeat'), '/bin/echo')
+
+    def test_age(self):
+        self.c.start('test', ['/bin/sleep', '1'])
+        r = self.c.get('test')
+        self.assertEqual(r['age'], 0)
+        self.c.update('test', age = 10)
+        r = self.c.get('test')
+        self.assertEqual(r['age'], 10)
 
 
 class TestListCommand(BaseTest):

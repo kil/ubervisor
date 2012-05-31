@@ -43,7 +43,9 @@
 
 struct process {
 	pid_t			p_pid;
-	time_t			p_start;
+	time_t			p_start,
+				p_age;
+	int			p_terminated;
 	struct child_config	*p_child_config;
 	int			p_instance;
 	struct event		p_heartbeat_timer;

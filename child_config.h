@@ -67,6 +67,8 @@ struct child_config {
 					cc_status,
 					cc_killsig;
 
+	time_t				cc_age;
+
 	/* not really ints but we use -1 to determine if this is set */
 	int				cc_uid,
 					cc_gid;

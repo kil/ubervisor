@@ -75,6 +75,7 @@ child_config_serialize(const struct child_config *cc)
 	ADDINT("uid", cc->cc_uid);
 	ADDINT("gid", cc->cc_gid);
 	ADDINT("error", cc->cc_error);
+	ADDINT("age", cc->cc_age);
 
 	if (cc->cc_command != NULL) {
 		t = json_object_new_array();
@@ -138,6 +139,7 @@ struct child_config *child_config_from_json(json_object *obj)
 	GETINT(ret->cc_uid, "uid");
 	GETINT(ret->cc_gid, "gid");
 	GETINT(ret->cc_error, "error");
+	GETINT(ret->cc_age, "age");
 
 	if ((t = json_object_object_get(obj, "args")) != NULL) {
 		if (!json_object_is_type(t, json_type_array)) {
@@ -230,6 +232,7 @@ struct child_config *child_config_new(void)
 	cc->cc_killsig = -1;
 	cc->cc_uid = -1;
 	cc->cc_gid = -1;
+	cc->cc_age = 0;
 	return cc;
 }
 

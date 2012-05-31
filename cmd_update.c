@@ -36,9 +36,10 @@
 #include "misc.h"
 #include "child_config.h"
 
-static char update_opts[] = "d:e:f:hH:i:k:o:s:";
+static char update_opts[] = "a:d:e:f:hH:i:k:o:s:";
 
 static struct option update_longopts[] = {
+	{ "age",	required_argument,	NULL,	'a' },
 	{ "dir",	required_argument,	NULL,	'd' },
 	{ "stderr",	required_argument,	NULL,	'e' },
 	{ "fatal",	required_argument,	NULL,	'f' },
@@ -57,6 +58,7 @@ help_update(void)
 	printf("Usage: %s update [Options] <name>\n", program_name);
 	printf("\n");
 	printf("Options:\n");
+	printf("\t-a, --age SEC         max process age in seconds.\n");
 	printf("\t-d, --dir DIR         chdir to DIR.\n");
 	printf("\t-e, --stderr FILE     stderr log FILE.\n");
 	printf("\t-f, --fatal COMMAND   run COMMAND if fatal state.\n");
@@ -90,6 +92,9 @@ cmd_update(int argc, char **argv)
 
 	while ((ch = getopt_long(argc, argv, update_opts, update_longopts, NULL)) != -1) {
 		switch (ch) {
+		case 'a':
+			cc->cc_age = strtol(optarg, NULL, 10);
+			break;
 		case 'd':
 			cc->cc_dir = optarg;
 			break;

@@ -16,6 +16,14 @@ Update configuration for group ``name``.
 Options
 =======
 
+-a, --age SEC                   maximum uptime (age) of a process in this group
+                                in seconds. If a process runs longer, it is
+                                killed by ubervisor.
+                                First ubervisor kill send a SIGTERM to the
+                                process. If after 5 seconds it is still running,
+                                SIGKILL is send.
+                                Note that the age is evaluated with a 5 second
+                                resolution.
 -d, --dir DIR                   update the work directory to ``DIR``.
 -e, --stderr FILE               update standard error log file for the group to
                                 ``FILE``.
