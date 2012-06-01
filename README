@@ -19,3 +19,12 @@ Useful cmake flags
 Debugging
 ---------
 To do a clang --analyze build, use `-DCLANG_ANALYZE:bool=true`.
+
+
+Starting ubervisor on boot
+--------------------------
+
+Debian based systems:
+
+sudo cp scripts/ubervisor_debian /etc/init.d/ubervisor
+sudo update-rc.d -f ubervisor defaults
