@@ -1919,6 +1919,10 @@ load_dump(char *fname)
 	fseek(f, 0, SEEK_END);
 	buf_siz = ftell(f);
 	fseek(f, 0, SEEK_SET);
+	if (buf_siz == 0) {
+		fclose(f);
+		return 1;
+	}
 	buf = xmalloc(buf_siz + 1);
 	if (fread(buf, buf_siz, 1, f) != 1)
 		die("fread");
