@@ -16,6 +16,7 @@ Get a configuration value for group ``name``.
 Options
 =======
 
+-a, --age        print maximum age of processes in the group.
 -d, --dir        print working directory for the group.
 -D, --dump       print raw reply.
 -e, --stderr     print standard error log file name.

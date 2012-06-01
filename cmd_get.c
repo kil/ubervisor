@@ -36,9 +36,10 @@
 #include "misc.h"
 #include "child_config.h"
 
-static char get_opts[] = "dDefgGhHikosuU";
+static char get_opts[] = "adDefgGhHikosuU";
 
 static struct option get_longopts[] = {
+	{ "age",	no_argument,		NULL,	'a' },
 	{ "dir",	no_argument,		NULL,	'd' },
 	{ "dump",	no_argument,		NULL,	'D' },
 	{ "stderr",	no_argument,		NULL,	'e' },
@@ -62,6 +63,7 @@ help_get(void)
 	printf("Usage: %s get [Options] <name>\n", program_name);
 	printf("\n");
 	printf("Options:\n");
+	printf("\t-a, --age        print age.\n");
 	printf("\t-d, --dir        print dir.\n");
 	printf("\t-D, --dump       print raw reply.\n");
 	printf("\t-e, --stderr     print stderr.\n");
@@ -86,6 +88,7 @@ cmd_get(int argc, char **argv)
 				dump = 0,
 				get_stdout = 0,
 				get_stderr = 0,
+				get_age = 0,
 				get_dir = 0,
 				get_uid = 0,
 				get_gid = 0,
@@ -109,6 +112,9 @@ cmd_get(int argc, char **argv)
 
 	while ((ch = getopt_long(argc, argv, get_opts, get_longopts, NULL)) != -1) {
 		switch (ch) {
+		case 'a':
+			get_age = 1;
+			break;
 		case 'd':
 			get_dir = 1;
 			break;
@@ -239,6 +245,7 @@ cmd_get(int argc, char **argv)
 	GETSTR("fatal_cb", get_fatal);
 	GETSTR("username", get_username);
 	GETSTR("groupname", get_groupname);
+	GETINT("age", get_age);
 	GETINT("uid", get_uid);
 	GETINT("gid", get_gid);
 	GETINT("status", get_status);
