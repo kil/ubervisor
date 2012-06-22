@@ -143,6 +143,12 @@ struct commands_s commands[] = {
 
 #define LOG_TS_FORMAT	"%b %d %T"
 
+/* logfile create mode */
+#define _LO_C		(O_APPEND | O_CREAT | O_WRONLY)
+
+/* logfile open mode */
+#define _LO_O 		(S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)
+
 static char		server_opts[] = "ac:d:fhlo:s";
 
 static struct option	server_longopts[] = {
@@ -472,13 +478,44 @@ replace_str(char *in, const char *a, const char *b)
 }
 
 /*
+ * try to log errors from spawn_child.
+ *
+ * We try to log to stderr, if defined. Otherwise, or if we can't open the
+ * stderr logfile, we try stdout.
+ */
+static void
+spawn_child_log(struct child_config *cc, const char *func) {
+	int		fd;
+	FILE		*f = NULL;
+
+	if (cc->cc_stderr != NULL) {
+		if ((fd = open(cc->cc_stderr, _LO_C, _LO_O)) != -1)
+			f = fdopen(fd, "w");
+	}
+
+	if (!f && cc->cc_stdout != NULL) {
+		if ((fd = open(cc->cc_stdout, _LO_C, _LO_O)) == -1) {
+			exit(EXIT_FAILURE);
+		}
+		f = fdopen(fd, "w");
+	}
+
+	if (f) {
+		fprintf(f, "ubervisor: spawn failed for \"%s\": %s: %s\n",
+				cc->cc_name, func, strerror(errno));
+		fclose(f);
+	}
+	exit(EXIT_FAILURE);
+}
+
+/*
  * setup child process. we are already forked here.
  */
 static void
 spawn_child(struct child_config *cc, int instance)
 {
-	int		stdout_fd,
-			stderr_fd;
+	int		stdout_fd = 0,
+			stderr_fd = 0;
 	char		instance_str[5];
 
 	snprintf(instance_str, sizeof(instance_str), "%d", instance);
@@ -486,7 +523,7 @@ spawn_child(struct child_config *cc, int instance)
 
 	if (cc->cc_dir != NULL) {
 		if (chdir(cc->cc_dir) == -1)
-			exit(1);
+			spawn_child_log(cc, "chdir");
 	}
 	close(0);
 	close(1);
@@ -494,29 +531,23 @@ spawn_child(struct child_config *cc, int instance)
 
 	if (cc->cc_stdout != NULL) {
 		replace_str(cc->cc_stdout, "%(NUM)", instance_str);
-		if ((stdout_fd = open(cc->cc_stdout,
-				O_APPEND | O_CREAT | O_WRONLY,
-				S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)) == -1) {
-			exit(1);
-		}
-		dup2(stdout_fd, 1);
+		if ((stdout_fd = open(cc->cc_stdout, _LO_C, _LO_O)) == -1)
+			spawn_child_log(cc, "open (stdout)");
+		dup2(stdout_fd, STDOUT_FILENO);
 		close(stdout_fd);
 	}
 
 	if (cc->cc_stderr != NULL) {
 		replace_str(cc->cc_stderr, "%(NUM)", instance_str);
-		if ((stderr_fd = open(cc->cc_stderr,
-				O_APPEND | O_CREAT | O_WRONLY,
-				S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)) == -1) {
-			exit(1);
-		}
-		dup2(stderr_fd, 2);
+		if ((stderr_fd = open(cc->cc_stderr, _LO_C, _LO_O)) == -1)
+			spawn_child_log(cc, "open (stderr)");
+		dup2(stderr_fd, STDERR_FILENO);
 		close(stderr_fd);
 	}
 
 	setsid();
 	execv(cc->cc_command[0], cc->cc_command);
-	exit(EXIT_FAILURE);
+	spawn_child_log(cc, "execv");
 }
 
 /*
