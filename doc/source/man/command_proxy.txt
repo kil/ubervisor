@@ -1,0 +1,26 @@
+===============
+ubervisor-proxy
+===============
+
+Synopsis
+========
+
+``ubervisor`` *proxy* ``[options]``
+
+Description
+===========
+
+Proxy stdin/stdout to ubervisor socket.
+
+Options
+=======
+
+-s, --socket PATH               path to ubervisor socket file to connect to.
+                                Overwrites UBERVISOR_SOCKET environment
+                                variable.
+
+See Also
+========
+:manpage:`ubervisor(1)`
+
+.. vim:spell:ft=rst

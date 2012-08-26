@@ -42,5 +42,6 @@ man_pages = [
     ('man/command_pids',   'ubervisor-pids',   u'Ubervisor-pids',           [u'Kilian Klimek'], 1),
     ('man/command_read',   'ubervisor-read',   u'Ubervisor-read',           [u'Kilian Klimek'], 1),
     ('man/command_subs',   'ubervisor-subs',   u'Ubervisor-subs',           [u'Kilian Klimek'], 1),
+    ('man/command_proxy',  'ubervisor-proxy',  u'Ubervisor-proxy',          [u'Kilian Klimek'], 1),
 ]
 

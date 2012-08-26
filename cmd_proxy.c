@@ -29,6 +29,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <getopt.h>
 
 #include <event.h>
 
@@ -40,6 +41,26 @@
 struct bufferevent	*be_in,
 			*be_out,
 			*be_sock;
+
+static char proxy_opts[] = "hs:";
+
+static struct option proxy_longopts[] = {
+	{ "help",	no_argument,		NULL,	'h' },
+	{ "socket",	required_argument,	NULL,	's' },
+	{ NULL,		0,			NULL,	0 }
+};
+
+static void
+help_proxy(void)
+{
+	printf("Usage: %s proxy [Options]\n", program_name);
+	printf("\n");
+	printf("Options:\n");
+	printf("\t-h, --help              help.\n");
+	printf("\t-s, --socket PATH       connect to socket at PATH.\n");
+	printf("\n");
+	exit(1);
+}
 
 static void
 proxy_read_cb(struct bufferevent *b, void *unused __attribute__((unused)))
@@ -73,12 +94,27 @@ int
 cmd_proxy(int argc, char **argv)
 {
 	struct event_base	*evloop;
-	int			sock;
+	int			sock,
+				ch;
 
-	if (argc > 1) {
-		fprintf(stderr, "%s takes no options.\n", argv[0]);
-		return 1;
+	while ((ch = getopt_long(argc, argv, proxy_opts, proxy_longopts, NULL)) != -1) {
+		switch (ch) {
+		case 's':
+			setenv("UBERVISOR_SOCKET", optarg, 1);
+			break;
+		case 'h':
+			help_proxy();
+			break;
+		default:
+			help_proxy();
+			break;
+		}
 	}
+
+	argc -= optind;
+
+	if (argc != 0)
+		help_proxy();
 
 	event_init();
 
