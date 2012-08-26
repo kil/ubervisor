@@ -195,6 +195,8 @@ class UbervisorClient(object):
             self.user = user
             self.key = key
             self.sock_cmd = command
+            if sock_file:
+                self.sock_cmd += ['-s', sock_file]
         self.connect()
 
     def start(self, name, args, dir = None, stdout = None, stderr = None,
