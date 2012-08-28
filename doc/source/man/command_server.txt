@@ -32,6 +32,7 @@ Options
                         the home directory of the user ubervisor runs as. The
                         log file is opened, after changing directory (either due
                         to a ``-d`` option or the default change).
+-P, --perm PERM         set file access permissions on socket file (default: 600).
 -s, --silent            exit silently if server is already running.
 
 See Also

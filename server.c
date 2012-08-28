@@ -149,7 +149,7 @@ struct commands_s commands[] = {
 /* logfile open mode */
 #define _LO_O 		(S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)
 
-static char		server_opts[] = "ac:d:fhlo:s";
+static char		server_opts[] = "ac:d:fhlo:P:s";
 
 static struct option	server_longopts[] = {
 	{ "autodump",	no_argument,		NULL,	'a' },
@@ -160,6 +160,7 @@ static struct option	server_longopts[] = {
 	{ "loadlatest",	no_argument,		NULL,	'l' },
 	{ "noexit",	no_argument,		NULL,	'n' },
 	{ "logfile",	required_argument,	NULL,	'o' },
+	{ "perm",	required_argument,	NULL,	'P' },
 	{ "silent",	no_argument,		NULL,	's' },
 	{ NULL,		0,			NULL,	0 }
 };
@@ -179,6 +180,7 @@ help_server(void)
 	printf("\t-n, --noexit           don't obey the exit command..\n");
 	printf("\t-o, --logfile FILE     write log output to FILE.\n");
 	printf("\t-s, --silent           exit silently if server is already running.\n");
+	printf("\t-P, --perm             set permissions on socket (default: 600).\n");
 	printf("\n");
 	printf("Examples:\n");
 	printf("\tubervisor server -d /tmp\n");
@@ -2054,6 +2056,8 @@ cmd_server(int argc, char **argv)
 	pid_t			pid;
 	struct sigaction	sa;
 	FILE			*tmp_fd;
+	mode_t			oumask,
+				numask = 0777 - (S_IRUSR | S_IWUSR);
 
 
 	if ((pw = getpwuid(geteuid())) == NULL)
@@ -2098,6 +2102,9 @@ cmd_server(int argc, char **argv)
 			break;
 		case 'o':
 			logfile = optarg;
+			break;
+		case 'P':
+			numask = 0777 - strtol(optarg, NULL, 8);
 			break;
 		case 's':
 			silent ^= 1;
@@ -2186,8 +2193,13 @@ cmd_server(int argc, char **argv)
 	strcpy(addr.sun_path, sock_path_ptr);
 	addr_len = sizeof(addr);
 
+
+	oumask = umask(numask);
+
 	if (bind(fd, (struct sockaddr *) &addr, addr_len) == -1)
 		die("bind");
+
+	umask(oumask);
 
 	listen(fd, 8);
 	printf("socket: %s\n", sock_path_ptr);
