@@ -1,30 +1,35 @@
-Ubervisor - process control daemon
-==================================
+# Ubervisor - process control daemon
+
+## Install
 
 You will need cmake, json-c and libevent to build ubervisor.
-On ubuntu, `apt-get install libevent-dev libjson0-dev cmake`
+On ubuntu, `apt-get install libevent-dev libjson0-dev cmake`.
 
 Use `cmake . && make` to build.
 
 Building the documentation requires python and sphinx. If cmake can
 find sphinx-build, man pages can be build with `make man`. The html
-documentation is build with `man htmldoc`.
+documentation is build with `make htmldoc` (or online [here](http://ubervisor.readthedocs.org/en/latest/)).
 
-Useful cmake flags
-------------------
--DCMAKE_C_COMPILER:string=clang			(force compiler)
--DCMAKE_INSTALL_PREFIX:string=/usr/local	(install prefix)
--DCMAKE_BUILD_TYPE=Debug			(set build type)
+### Useful cmake flags
 
-Debugging
----------
-To do a clang --analyze build, use `-DCLANG_ANALYZE:bool=true`.
+* `-DCMAKE_C_COMPILER:string=clang`		(force compiler)
+* `-DCMAKE_INSTALL_PREFIX:string=/usr/local`	(install prefix)
+* `-DCMAKE_BUILD_TYPE=Debug`			(set build type)
+
+### Debugging
+
+To do a clang `--analyze` build, use `-DCLANG_ANALYZE:bool=true`.
 
 
-Starting ubervisor on boot
---------------------------
+## Starting ubervisor on boot
 
-Debian based systems:
+### Debian based systems
 
-sudo cp scripts/ubervisor_debian /etc/init.d/ubervisor
-sudo update-rc.d -f ubervisor defaults
+`sudo cp scripts/ubervisor_debian /etc/init.d/ubervisor`
+`sudo update-rc.d -f ubervisor defaults`
+
+## License
+
+BSD 2-clause license
+
