@@ -29,6 +29,20 @@ To do a clang `--analyze` build, use `-DCLANG_ANALYZE:bool=true`.
 `sudo cp scripts/ubervisor_debian /etc/init.d/ubervisor`
 `sudo update-rc.d -f ubervisor defaults`
 
+Environment variables to configure the server are read from
+`/etc/ubervisor/ubervisor_server.conf` (see ubervisor-server
+man page).
+
+### Systemd
+
+`sudo cp scripts/ubervisor.service /etc/systemd/system/`
+`sudo systemctl enable ubervisor.service`
+
+The file `/etc/ubervisor/ubervisor_server.conf` has to exist. The
+file is read by systemd and should set environment variables to
+configure the server (see ubervisor-server man page).
+
+
 ## License
 
 BSD 2-clause license

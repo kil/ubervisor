@@ -35,6 +35,23 @@ Options
 -P, --perm PERM         set file access permissions on socket file (default: 600).
 -s, --silent            exit silently if server is already running.
 
+Environment
+===========
+
+Environment variables can be used to set command line switches.
+Environment variables are read before command line arguments are
+processed (i.e. command line overwrites environment).
+
+* UBERVISOR_CONFIG      ``-c``
+* UBERVISOR_LOGFILE     ``-o``
+* UBERVISOR_DIR         ``-d``
+* UBERVISOR_PERM        ``-P``
+* UBERVISOR_AUTODUMP    ``-a``
+* UBERVISOR_NOEXIT      ``-n``
+* UBERVISOR_LOADLATEST  ``-l``
+* UBERVISOR_SILENT      ``-s``
+* UBERVISOR_FOREGROUND  ``-f``
+
 See Also
 ========
 :manpage:`ubervisor(1)`, :manpage:`ubervisor-start(1)`

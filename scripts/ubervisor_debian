@@ -53,6 +53,10 @@ if test -f /etc/default/ubervisor; then
     . /etc/default/ubervisor
 fi
 
+if test -f /etc/ubervisor/ubervisor_server.conf; then
+    . /etc/ubervisor/ubervisor_server.conf
+fi
+
 test -x $UBERVISOR_CMD || exit 0
 
 umask 022

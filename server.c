@@ -2077,10 +2077,27 @@ cmd_server(int argc, char **argv)
 	process_hash = uvhash_new(16);
 	child_config_hash = uvstrhash_new(16);
 
+	/* read config values from environment */
+	dump_file = getenv("UBERVISOR_CONFIG");
+	logfile = getenv("UBERVISOR_LOGFILE");
+	dir = getenv("UBERVISOR_DIR");
+	if (getenv("UBERVISOR_PERM") != NULL)
+		numask = 0777 - strtol(getenv("UBERVISOR_PERM"), NULL, 8);
+	if (getenv("UBERVISOR_AUTODUMP") != NULL)
+		auto_dump = strtol(getenv("UBERVISOR_AUTODUMP"), NULL, 10) == 1;
+	if (getenv("UBERVISOR_NOEXIT") != NULL)
+		allow_exit = strtol(getenv("UBERVISOR_NOEXIT"), NULL, 10) == 1 ? 0 : 1;
+	if (getenv("UBERVISOR_LOADLATEST") != NULL)
+		load_latest = strtol(getenv("UBERVISOR_LOADLATEST"), NULL, 10) == 1;
+	if (getenv("UBERVISOR_SILENT") != NULL)
+		silent = strtol(getenv("UBERVISOR_SILENT"), NULL, 10) == 1;
+	if (getenv("UBERVISOR_FOREGROUND") != NULL)
+		do_fork = strtol(getenv("UBERVISOR_FOREGROUND"), NULL, 10) == 1 ? 0 : 1;
+
 	while ((ch = getopt_long(argc, argv, server_opts, server_longopts, NULL)) != -1) {
 		switch (ch) {
 		case 'a':
-			auto_dump ^= 1;
+			auto_dump = 1;
 			break;
 		case 'c':
 			dump_file = optarg;
@@ -2089,10 +2106,10 @@ cmd_server(int argc, char **argv)
 			dir = optarg;
 			break;
 		case 'e':
-			allow_exit ^= 1;
+			allow_exit = 1;
 			break;
 		case 'f':
-			do_fork ^= 1;
+			do_fork = 0;
 			break;
 		case 'h':
 			help_server();

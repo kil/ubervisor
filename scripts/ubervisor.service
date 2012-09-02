@@ -1,0 +1,9 @@
+[Unit]
+Description=Ubervisor Daemon
+
+[Service]
+ExecStart=/usr/local/bin/ubervisor server -f
+EnvironmentFile=/etc/ubervisor/ubervisor_server.conf
+
+[Install]
+WantedBy=multi-user.target
