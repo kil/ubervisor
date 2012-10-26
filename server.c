@@ -87,6 +87,7 @@ static struct event_base	*evloop;
 static FILE			*log_fd;
 static int			auto_dump,
 				allow_exit;
+static char			*server_logfile;
 
 /*
  * prototypes
@@ -186,6 +187,27 @@ help_server(void)
 	printf("\tubervisor server -d /tmp\n");
 	printf("\n");
 	exit(1);
+}
+
+
+int
+open_server_log(void) {
+	FILE		*fd;
+	int		r;
+
+	if (server_logfile == NULL)
+	       return 1;
+
+	if ((fd = fopen(server_logfile, "a")) == NULL)
+		return 0;
+
+	setvbuf(fd, NULL, _IOLBF, 0);
+	r = fileno(fd);
+	setcloseonexec(r);
+	if (log_fd)
+		fclose(log_fd);
+	log_fd = fd;
+	return 1;
 }
 
 
@@ -664,7 +686,7 @@ exit_is_error(int ret, struct child_config *cc)
  * libevent signal handler.
  */
 static void
-signal_cb(int unused0 __attribute__((unused)),
+sigchld_cb(int unused0 __attribute__((unused)),
 		short unused1 __attribute__((unused)),
 		void *unused2 __attribute__((unused)))
 {
@@ -713,6 +735,19 @@ signal_cb(int unused0 __attribute__((unused)),
 				spawn(cc, inst);
 		}
 	}
+}
+
+/*
+ * SIGHUP signal handler.
+ */
+static void
+sighup_cb(int unused0 __attribute__((unused)),
+		short unused1 __attribute__((unused)),
+		void *unused2 __attribute__((unused)))
+{
+	slog("got SIGHUP. reopening logfile.\n");
+	if (!open_server_log())
+		slog("reopen failed.\n");
 }
 
 /*
@@ -2037,7 +2072,7 @@ load_newest_dump(void) {
 int
 cmd_server(int argc, char **argv)
 {
-	struct event		ev, se;
+	struct event		ev, se, se1;
 	struct sockaddr_un	addr;
 	struct passwd		*pw;
 	struct stat		st;
@@ -2045,8 +2080,7 @@ cmd_server(int argc, char **argv)
 	char			sock_path[PATH_MAX],
 				*dump_file = NULL,
 				*sock_path_ptr,
-				*dir = NULL,
-				*logfile = NULL;
+				*dir = NULL;
 	int			fd,
 				do_fork = 1,
 				silent = 0,
@@ -2071,6 +2105,7 @@ cmd_server(int argc, char **argv)
 	/* init globals */
 	auto_dump = 0;
 	allow_exit = 1;
+	server_logfile = NULL;
 	log_fd = stdout;
 	LIST_INIT(&child_config_list_head);
 	LIST_INIT(&client_con_list_head);
@@ -2079,7 +2114,7 @@ cmd_server(int argc, char **argv)
 
 	/* read config values from environment */
 	dump_file = getenv("UBERVISOR_CONFIG");
-	logfile = getenv("UBERVISOR_LOGFILE");
+	server_logfile = getenv("UBERVISOR_LOGFILE");
 	dir = getenv("UBERVISOR_DIR");
 	if (getenv("UBERVISOR_PERM") != NULL)
 		numask = 0777 - strtol(getenv("UBERVISOR_PERM"), NULL, 8);
@@ -2118,7 +2153,7 @@ cmd_server(int argc, char **argv)
 			load_latest = 1;
 			break;
 		case 'o':
-			logfile = optarg;
+			server_logfile = optarg;
 			break;
 		case 'P':
 			numask = 0777 - strtol(optarg, NULL, 8);
@@ -2177,15 +2212,15 @@ cmd_server(int argc, char **argv)
 	}
 
 	/* log file */
-	if (logfile == NULL) {
+	if (server_logfile == NULL && do_fork) {
 		r = snprintf(sock_path, PATH_MAX, LOG_PATH, pw->pw_dir);
 		if (r < 0 || r >= PATH_MAX)
 			die("snprintf");
-		logfile = xstrdup(sock_path);
+		server_logfile = xstrdup(sock_path);
 	}
 
-	if (do_fork)
-		printf("logfile: %s\n", logfile);
+	if (server_logfile)
+		printf("logfile: %s\n", server_logfile);
 
 	/* socket file in dir */
 	if ((sock_path_ptr = getenv("UBERVISOR_SOCKET")) == NULL) {
@@ -2221,11 +2256,15 @@ cmd_server(int argc, char **argv)
 	listen(fd, 8);
 	printf("socket: %s\n", sock_path_ptr);
 
+	if (server_logfile != NULL)
+		log_fd = NULL;
+
 	/* check if we can open the logfile before we fork. */
-	if (logfile != NULL && do_fork) {
-		if ((tmp_fd = fopen(logfile, "a")) == NULL)
+	if (server_logfile != NULL) {
+		if (!open_server_log())
 			die("fopen");
-		fclose(tmp_fd);
+		fclose(log_fd);
+		log_fd = NULL;
 	}
 
 	/* check if we can open the dumpfile before we work. */
@@ -2253,13 +2292,8 @@ cmd_server(int argc, char **argv)
 	if ((evloop = event_base_new()) == NULL)
 		die("event_base_new");
 
-	if (logfile != NULL && do_fork) {
-		if ((log_fd = fopen(logfile, "a")) == NULL)
-			die("fopen");
-		setvbuf(log_fd, NULL, _IOLBF, 0);
-		r = fileno(log_fd);
-		setcloseonexec(r);
-	}
+	if (server_logfile != NULL)
+		open_server_log();
 
 	/* loading a dump will start the processes - must do this after
 	 * event_init */
@@ -2276,8 +2310,11 @@ cmd_server(int argc, char **argv)
 	event_set(&ev, fd, EV_READ | EV_PERSIST, accept_cb, NULL);
 	event_add(&ev, NULL);
 
-	event_set(&se, SIGCHLD, EV_SIGNAL | EV_PERSIST, signal_cb, NULL);
+	event_set(&se, SIGCHLD, EV_SIGNAL | EV_PERSIST, sigchld_cb, NULL);
 	event_add(&se, NULL);
+
+	event_set(&se1, SIGHUP, EV_SIGNAL | EV_PERSIST, sighup_cb, NULL);
+	event_add(&se1, NULL);
 
 	slog("server started.\n");
 	event_dispatch();

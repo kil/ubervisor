@@ -22,7 +22,7 @@ Options
                         change to the directory ``.uber`` in the home directory
                         of the user it runs as.
 -f, --foreground        don't fork into background. When running in foreground,
-                        ubervisor will always log to standard output.
+                        ubervisor will log to standard output by default.
 -h, --help              help.
 -l, --loadlatest FILE   load most recent dump from the current directory. This is
                         done after changing directory (either due to a ``-d``

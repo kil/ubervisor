@@ -162,4 +162,25 @@ ck0 start	0 '' $UBER server -l
 ck0 get		0 '1' $UBER get -s test
 $UBER exit
 
+TMPFILE=$TMPDIR/log0
+
+$UBER server -o $TMPFILE 2> /dev/null
+
+#
+# test HUP handler
+#
+rm $TMPFILE
+if [ -f $TMPFILE ]; then
+	echo 'err'
+	$UBER exit
+	exit 1
+fi
+killall -HUP ubervisor
+if [ ! -f $TMPFILE ]; then
+	echo 'err'
+	$UBER exit
+	exit 1
+fi
+$UBER exit
+
 rm -rf $TMPDIR
