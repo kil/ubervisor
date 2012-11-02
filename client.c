@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011 Kilian Klimek <kilian.klimek@googlemail.com>
+ * Copyright (c) 2011-2012 Kilian Klimek <kilian.klimek@googlemail.com>
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -293,9 +293,10 @@ cmd_exit(int argc, char **argv)
 	return ret;
 }
 
-static char kill_opts[] = "hs:";
+static char kill_opts[] = "hi:s:";
 
 static struct option kill_longopts[] = {
+	{ "index",	required_argument,	NULL,	'i' },
 	{ "signal",	required_argument,	NULL,	's' },
 	{ NULL,		0,			NULL,	0 }
 };
@@ -306,6 +307,7 @@ help_kill(void)
 	printf("Usage: %s kill [Options] <name>\n", program_name);
 	printf("\n");
 	printf("Options:\n");
+	printf("\t-i, --index NUM    send signal only to a single process.\n");
 	printf("\t-s, --signal SIG   send SIG to processes.\n");
 	printf("\n");
 	exit(1);
@@ -319,6 +321,7 @@ cmd_kill(int argc, char **argv)
 				len,
 				ret,
 				i,
+				idx = -1,
 				sig = -1;
 
 	char			*msg;
@@ -331,6 +334,9 @@ cmd_kill(int argc, char **argv)
 
 	while ((ch = getopt_long(argc, argv, kill_opts, kill_longopts, NULL)) != -1) {
 		switch (ch) {
+		case 'i':
+			idx = strtol(optarg, NULL, 10);
+			break;
 		case 's':
 			sig = strtol(optarg, NULL, 10);
 			break;
@@ -353,6 +359,11 @@ cmd_kill(int argc, char **argv)
 	if (sig != -1) {
 		n = json_object_new_int(sig);
 		json_object_object_add(obj, "sig", n);
+	}
+
+	if (idx != -1) {
+		n = json_object_new_int(idx);
+		json_object_object_add(obj, "index", n);
 	}
 
 	msg = xstrdup(json_object_to_json_string(obj));

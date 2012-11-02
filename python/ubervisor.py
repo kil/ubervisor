@@ -3,7 +3,7 @@
 # Copyright (c) 2011, Whitematter Labs GmbH
 # All rights reserved.
 #
-# Copyright (c) 2011 Kilian Klimek <kilian.klimek@googlemail.com>
+# Copyright (c) 2011-2012 Kilian Klimek <kilian.klimek@googlemail.com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -259,20 +259,23 @@ class UbervisorClient(object):
             raise UbervisorClientException(r['msg'])
         return r['pids']
 
-    def kill(self, name, sig = None, wait = True):
+    def kill(self, name, index = None, sig = None, wait = True):
         """
         Kill processes in group *name*. By default, the killsig used in start
         command is uned (which itself defaults to 15).
 
         :param str name:        name of group the signal shall be send to.
         :param int sig:         signal to deliver.
+        :param int index:       group index (don't kill whole group).
         :param bool wait:       if ``True``, wait for server reply.
         :returns:               list of pids that got a signal send.
         """
-        d = dumps(dict(name = name))
+        d = dict(name = name)
         if sig:
             d['sig'] = int(sig)
-        x = self._send('KILL', d)
+        if index:
+            d['index'] = int(index)
+        x = self._send('KILL', dumps(d))
         if not wait:
             return x
         r = self._reply(x)

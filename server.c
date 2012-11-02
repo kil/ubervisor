@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011 Kilian Klimek <kilian.klimek@googlemail.com>
+ * Copyright (c) 2011-2012 Kilian Klimek <kilian.klimek@googlemail.com>
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -1161,6 +1161,7 @@ c_kill(struct client_con *con, char *buf)
 				*p;
 
 	int			sig,
+				idx = -1,
 				x;
 
 	if ((obj = json_tokener_parse(buf)) == NULL) {
@@ -1211,6 +1212,11 @@ c_kill(struct client_con *con, char *buf)
 			sig = json_object_get_int(m);
 	}
 
+	if ((m = json_object_object_get(obj, "index")) != NULL) {
+		if (json_object_is_type(m, json_type_int))
+			idx = json_object_get_int(m);
+	}
+
 	json_object_put(obj);
 
 	/* construct reply */
@@ -1227,14 +1233,26 @@ c_kill(struct client_con *con, char *buf)
 
 	json_object_object_add(obj, "pids", m);
 
-	for (x = 0; x < cc->cc_instances; x++) {
-		i = cc->cc_childs[x];
-		if (i == NULL)
-			continue;
-		kill(i->p_pid, sig);
-		if ((p = json_object_new_int(i->p_pid)) == NULL)
-			return 1;
-		json_object_array_add(m, p);
+	if (idx == -1) {
+		for (x = 0; x < cc->cc_instances; x++) {
+			i = cc->cc_childs[x];
+			if (i == NULL)
+				continue;
+			kill(i->p_pid, sig);
+			if ((p = json_object_new_int(i->p_pid)) == NULL)
+				return 1;
+			json_object_array_add(m, p);
+		}
+	} else {
+		if (idx >= 0 && idx < cc->cc_instances) {
+			i = cc->cc_childs[idx];
+			if (i != NULL) {
+				kill(i->p_pid, sig);
+				if ((p = json_object_new_int(i->p_pid)) == NULL)
+					return 1;
+				json_object_array_add(m, p);
+			}
+		}
 	}
 
 	ret = xstrdup(json_object_to_json_string(obj));

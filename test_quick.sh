@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Copyright (c) 2011 Kilian Klimek <kilian.klimek@googlemail.com>
+# Copyright (c) 2011-2012 Kilian Klimek <kilian.klimek@googlemail.com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -26,7 +26,12 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-UBER=./ubervisor
+UBER=${UBER:-./build/ubervisor}
+
+if [ ! -x $UBER ]; then
+	echo $UBER not executable
+	exit 1
+fi
 
 ck0() {
 	MSG=$1
@@ -54,6 +59,9 @@ ck0() {
 			echo ok
 		fi
 	else
+		echo Error: $E $RET
+		cat out
+		cat err
 		$UBER exit 2> /dev/null
 		exit 1
 	fi
@@ -123,6 +131,7 @@ ck0 'update -f'	0 '' $UBER update -f /bin/echo tst
 
 ck0 kill	0 ''		$UBER kill tst
 ck0 kill_s	0 ''		$UBER kill -s 9 tst
+ck0 kill_i	0 ''		$UBER kill -i 0 tst
 ck0 'get -D'	0 ''		$UBER get -D tst
 ck0 'get -d'	0 '/tmp'	$UBER get -d tst
 ck0 'get -o'	0 "$TMPDIR/x"	$UBER get -o tst

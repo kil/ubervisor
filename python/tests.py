@@ -3,7 +3,7 @@
 # Copyright (c) 2011, Whitematter Labs GmbH
 # All rights reserved.
 #
-# Copyright (c) 2011 Kilian Klimek <kilian.klimek@googlemail.com>
+# Copyright (c) 2011-2012 Kilian Klimek <kilian.klimek@googlemail.com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -180,6 +180,16 @@ class TestKillCommand(BaseTest):
         self.c.start('test', ['/bin/sleep', '1'], instances = 4)
         r = self.c.kill('test')
         self.assertEqual(len(r), 4)
+
+    def test_kill5(self):
+        self.c.start('test', ['/bin/sleep', '1'], instances = 4)
+        r = self.c.kill('test', index = 1)
+        self.assertEqual(len(r), 1)
+
+    def test_kill6(self):
+        self.c.start('test', ['/bin/sleep', '1'], instances = 1)
+        r = self.c.kill('test', sig = 15)
+        self.assertEqual(len(r), 1)
 
 class TestPidsCommand(BaseTest):
     def test_pids0(self):
