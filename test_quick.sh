@@ -76,6 +76,7 @@ if [ "$?" = "0" ]; then
 fi
 
 TMPDIR=`mktemp -d /tmp/uber_test_XXXX`
+export UBERVISOR_SOCKET=$TMPDIR/socket
 
 if [ -z "$TMPDIR" ]; then
 	echo failed to create TMDIR

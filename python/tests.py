@@ -52,7 +52,8 @@ def _sleep_monkey(fun):
 class BaseTest(TestCase):
     def get_client(self):
         return UbervisorClient(host = environ.get("TEST_HOST", None),
-                command = [environ.get("UBERVISOR_PATH", ""), 'proxy'])
+                command = [environ.get("UBERVISOR_PATH", ""), 'proxy'],
+                sock_file = environ.get("UBERVISOR_SOCKET"))
 
     def setUp(self):
         self.c = self.get_client()
@@ -674,6 +675,9 @@ class TestBigMsg(BaseTest):
 if __name__ == '__main__':
     start = environ.get("UBERVISOR_RUN", None)
     if start:
+        tmpdir = mkdtemp()
+        socket_file = path.join(tmpdir, "socket")
+        environ["UBERVISOR_SOCKET"] = socket_file
         p = Popen([start, "server"])
 
     if len(sys.argv) > 1:
@@ -686,3 +690,4 @@ if __name__ == '__main__':
         x = Popen([start, "exit"], stdout = PIPE, stderr = PIPE)
         x.wait()
         p.wait()
+        rmtree(tmpdir)
