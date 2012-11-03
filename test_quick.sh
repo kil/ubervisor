@@ -160,7 +160,7 @@ pgrep ubervisor
 cat > $TMPDIR/test_dump1 << __EOF__
 [
 {'name': 'test',
-'command': ["/bin/sleep", "2"]}
+'args': ["/bin/sleep", "2"]}
 ]
 __EOF__
 

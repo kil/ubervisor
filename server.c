@@ -2028,6 +2028,8 @@ load_dump(char *fname)
 			return 0;
 		if ((cc = child_config_from_json(t)) == NULL)
 			return 0;
+		if (cc->cc_command == NULL)
+			return 0;
 		slog("load: %s\n", cc->cc_name);
 		/* Set some defaults that we require to operate, if they are
 		 * not set already. */
@@ -2054,7 +2056,7 @@ load_dump(char *fname)
  * search current dir for dumps and load the newest.
  */
 static void
-load_newest_dump(void) {
+load_newest_dump(const char *dump_file) {
 	DIR		*dh;
 	struct dirent	*d;
 	struct stat	s;
@@ -2062,6 +2064,16 @@ load_newest_dump(void) {
 	char		name[PATH_MAX];
 
 	name[0] = '\0';
+
+	if (dump_file) {
+		if (stat(dump_file, &s) == 0) {
+			if (strlen(dump_file) < PATH_MAX) {
+				t = s.st_mtime;
+				strcpy(name, dump_file);
+			}
+		}
+	}
+
 	if ((dh = opendir(".")) == NULL)
 		die("opendir");
 
@@ -2195,11 +2207,6 @@ cmd_server(int argc, char **argv)
 	if (argc != 0)
 		help_server();
 
-	if (dump_file && load_latest) {
-		fprintf(stderr, "-l and -c are mutually exclusive\n");
-		return 1;
-	}
-
 	if (getenv("UBERVISOR_RSH") != NULL) {
 		fprintf(stderr, "unsetting UBERVISOR_RSH.\n");
 		unsetenv("UBERVISOR_RSH");
@@ -2315,13 +2322,13 @@ cmd_server(int argc, char **argv)
 
 	/* loading a dump will start the processes - must do this after
 	 * event_init */
-	if (dump_file != NULL) {
+	if (dump_file != NULL && !load_latest) {
 		if (!load_dump(dump_file))
 			die("dump_file");
 	}
 
 	if (load_latest)
-		load_newest_dump();
+		load_newest_dump(dump_file);
 
 	setcloseonexec(fd);
 

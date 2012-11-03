@@ -26,7 +26,9 @@ Options
 -h, --help              help.
 -l, --loadlatest FILE   load most recent dump from the current directory. This is
                         done after changing directory (either due to a ``-d``
-                        option or the default change).
+                        option or the default change). If the ``-c`` option was
+                        given, also check the modification time of that file and
+                        load the file that was modified last.
 -n, --noexit            don't obey the exit command.
 -o, --logfile FILE      write log output to FILE. The default is ``uber.log`` in
                         the home directory of the user ubervisor runs as. The
