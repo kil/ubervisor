@@ -630,19 +630,22 @@ heartbeat_cb(int unused0 __attribute__((unused)),
 	schedule_heartbeat(p);
 	uptime = time(NULL) - p->p_start;
 
+	cc = p->p_child_config;
+
 	if (p->p_age > 0 && uptime > p->p_age) {
 		if (p->p_terminated) {
 			slog("pid %d exceeded uptime. Sending KILL\n", p->p_pid);
 			kill(p->p_pid, SIGKILL);
 			return;
 		}
-		slog("pid %d exceeded uptime. Sending TERM\n", p->p_pid);
-		kill(p->p_pid, SIGTERM);
+		slog("pid %d exceeded uptime. Sending kill signal\n", p->p_pid);
+		if (cc)
+			kill(p->p_pid, cc->cc_killsig);
+		else
+			kill(p->p_pid, SIGTERM);
 		p->p_terminated = 1;
 		return;
 	}
-
-	cc = p->p_child_config;
 
 	if (cc == NULL || cc->cc_heartbeat == NULL)
 		return;

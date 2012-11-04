@@ -19,11 +19,21 @@ Options
 -a, --age SEC                   maximum uptime (age) of a process in this group
                                 in seconds. If a process runs longer, it is
                                 killed by ubervisor.
-                                First ubervisor kill send a SIGTERM to the
-                                process. If after 5 seconds it is still running,
-                                SIGKILL is send.
+
+                                First the kill signal is send to the process
+                                (see ``-k``). If after 5 seconds it is still
+                                running, SIGKILL is send.
+
+                                If ubervisor can't determine the default kill
+                                signal, SIGTERM is used. This happens when the
+                                group is deleted while processes are still
+                                running.
+
                                 Note that the age is evaluated with a 5 second
-                                resolution.
+                                resolution. Because of this the actual maximum
+                                run time of a process may be between SEC and
+                                SEC + 5 seconds. This also means age of less
+                                then 5 seconds is not supported.
 -d, --dir DIR                   change dir to ``DIR`` before starting child.
                                 The default is to not change directories.
 -e, --stderr FILE               log standard error for processes in this group
@@ -46,7 +56,9 @@ Options
                                 one child is started per group.
 -k, --killsig SIGNAL            signal used to kill processes in this group.
                                 Defaults to 15 (SIGTERM). This is used as the
-                                default signal when invoking the kill command.
+                                default signal when invoking the kill command
+                                and when terminating a process due to uptime
+                                (see ``-a``).
 -o, --stdout FILE               log standard output for processes in this group
                                 to ``FILE``. If ``FILE`` contains the
                                 substring ``%(NUM)``, the substring will be
