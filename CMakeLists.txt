@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2011 Kilian Klimek <kilian.klimek@googlemail.com>
+# Copyright (c) 2011-2012 Kilian Klimek <kilian.klimek@googlemail.com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -74,9 +74,9 @@ MESSAGE(STATUS "mandir: " ${MAN_INSTALL_DIR})
 FIND_PROGRAM(SPHINX_BUILD sphinx-build)
 IF(SPHINX_BUILD)
 	MESSAGE(STATUS "sphinx-build: " ${SPHINX_BUILD})
-	ADD_CUSTOM_TARGET(man sphinx-build -b man ./doc/source  ./doc/build/man)
-	ADD_CUSTOM_TARGET(htmldoc sphinx-build -b html ./doc/source  ./doc/build/html)
-	INSTALL(CODE "FILE(GLOB MANPAGES \"doc/build/man/*.1\")"
+	ADD_CUSTOM_TARGET(man sphinx-build -b man ${CMAKE_CURRENT_SOURCE_DIR}/doc/source ${CMAKE_CURRENT_BINARY_DIR}/doc/build/man)
+	ADD_CUSTOM_TARGET(htmldoc sphinx-build -b html "${CMAKE_CURRENT_SOURCE_DIR}/doc/source" ${CMAKE_CURRENT_BINARY_DIR}/doc/build/html)
+	INSTALL(CODE "FILE(GLOB MANPAGES \"${CMAKE_CURRENT_BINARY_DIR}/doc/build/man/*.1\")"
 		CODE "FILE(INSTALL \${MANPAGES} DESTINATION \"${MAN_INSTALL_DIR}\")")
 ELSE(SPHINX_BUILD)
 	MESSAGE(STATUS "sphinx-build not found. Documentation cannot be build.")
@@ -89,6 +89,7 @@ CONFIGURE_FILE(cmake-config.h.in
 	@ONLY)
 
 INCLUDE_DIRECTORIES(.
+	${PROJECT_BINARY_DIR}
 	${EVENT_INCLUDE_DIR}
 	${JSON_INCLUDE_DIR})
 
