@@ -140,7 +140,11 @@ class UbervisorClient(object):
             if len(b) != 4:
                 raise UbervisorClientException('reply error')
             l, cid = unpack('!HH', b)
-            x += self.s.recv(l & CHUNKSIZ)
+            r = (l & CHUNKSIZ)
+            s = ''
+            while len(s) < r:
+                s += self.s.recv(r - len(s))
+            x += s
             if not (l & CHUNKEXT):
                 break
         try:
