@@ -44,6 +44,7 @@
  */
 #define SUBS_SERVER	1
 #define SUBS_STATUS	2
+#define SUBS_GROUP_CFG	4
 
 struct subscription {
 	LIST_ENTRY(subscription)	s_ent;

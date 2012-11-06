@@ -609,39 +609,107 @@ class TestAsync(BaseTest):
         self.assertEqual(cid, c)
         c2.close()
 
+    def waitfor(self, c):
+        while True:
+            r, msg = self.c.wait()
+            if r == c:
+                return msg
+
     def test_status_subs(self):
         cmd = ['/bin/sleep', '1']
         c = self.c.subs(2)
         self.c.start('test', cmd, wait = False)
 
-        while True:
-            r, msg = self.c.wait()
-            if r == c:
-                break
+        msg = self.waitfor(c)
         self.assertEqual(msg['name'], 'test')
         self.assertEqual(msg['status'], 4)
-        while True:
-            r, msg = self.c.wait()
-            if r == c:
-                break
+
+        msg = self.waitfor(c)
         self.assertEqual(msg['name'], 'test')
         self.assertEqual(msg['status'], 1)
 
         self.c.update('test', status = 2, wait = False)
 
-        while True:
-            r, msg = self.c.wait()
-            if r == c:
-                break
+        msg = self.waitfor(c)
         self.assertEqual(msg['name'], 'test')
         self.assertEqual(msg['status'], 2)
         self.c.delete('test', wait = False)
-        while True:
-            r, msg = self.c.wait()
-            if r == c:
-                break
+
+        msg = self.waitfor(c)
         self.assertEqual(msg['name'], 'test')
         self.assertEqual(msg['status'], 5)
+
+    def test_group_config_subs_1(self):
+        cmd = ['/bin/sleep', '1']
+        c = self.c.subs(4)
+        self.c.start('test', cmd, wait = False)
+        self.c.update('test', status = 2, wait = False)
+        msg = self.waitfor(c)
+        self.assertEqual(msg['status'], 2)
+
+    def test_group_config_subs_2(self):
+        cmd = ['/bin/sleep', '1']
+        c = self.c.subs(4)
+        self.c.start('test', cmd, wait = False)
+        self.c.update('test', killsig = 1, wait = False)
+        msg = self.waitfor(c)
+        self.assertEqual(msg['killsig'], 1)
+
+    def test_group_config_subs_3(self):
+        cmd = ['/bin/sleep', '1']
+        c = self.c.subs(4)
+        self.c.start('test', cmd, wait = False)
+        self.c.update('test', dir = '/tmp', wait = False)
+        msg = self.waitfor(c)
+        self.assertEqual(msg['dir'], '/tmp')
+
+    def test_group_config_subs_4(self):
+        cmd = ['/bin/sleep', '1']
+        c = self.c.subs(4)
+        self.c.start('test', cmd, wait = False)
+        self.c.update('test', stdout = self.tmpfile, wait = False)
+        msg = self.waitfor(c)
+        self.assertEqual(msg['stdout'], self.tmpfile)
+
+    def test_group_config_subs_5(self):
+        cmd = ['/bin/sleep', '1']
+        c = self.c.subs(4)
+        self.c.start('test', cmd, wait = False)
+        self.c.update('test', stderr = self.tmpfile, wait = False)
+        msg = self.waitfor(c)
+        self.assertEqual(msg['stderr'], self.tmpfile)
+
+    def test_group_config_subs_6(self):
+        cmd = ['/bin/sleep', '1']
+        c = self.c.subs(4)
+        self.c.start('test', cmd, wait = False)
+        self.c.update('test', heartbeat = self.tmpfile, wait = False)
+        msg = self.waitfor(c)
+        self.assertEqual(msg['heartbeat'], self.tmpfile)
+
+    def test_group_config_subs_7(self):
+        cmd = ['/bin/sleep', '1']
+        c = self.c.subs(4)
+        self.c.start('test', cmd, wait = False)
+        self.c.update('test', fatal_cb = self.tmpfile, wait = False)
+        msg = self.waitfor(c)
+        self.assertEqual(msg['fatal_cb'], self.tmpfile)
+
+    def test_group_config_subs_8(self):
+        cmd = ['/bin/sleep', '1']
+        c = self.c.subs(4)
+        self.c.start('test', cmd, wait = False)
+        self.c.update('test', instances = 2, wait = False)
+        msg = self.waitfor(c)
+        self.assertEqual(msg['instances'], 2)
+
+    def test_group_config_subs_9(self):
+        cmd = ['/bin/sleep', '1']
+        c = self.c.subs(4)
+        self.c.start('test', cmd, wait = False)
+        self.c.update('test', age = 20, wait = False)
+        msg = self.waitfor(c)
+        self.assertEqual(msg['age'], 20)
 
 
 class TestBigMsg(BaseTest):

@@ -390,6 +390,19 @@ send_status_update_notification(const char *name, int status)
 }
 
 /*
+ * send notification about group configuration update.
+ */
+static void
+send_group_cfg_update_notification(const struct child_config *cc)
+{
+	char			*str;
+
+	str = child_config_serialize(cc);
+	send_notification(SUBS_GROUP_CFG, str);
+	free(str);
+}
+
+/*
  * run fatal callback command for a group.
  */
 static void
@@ -890,7 +903,8 @@ c_spwn(struct client_con *con, char *buf)
 static int
 c_updt(struct client_con *con, char *buf)
 {
-	int			i;
+	int			i,
+				changed = 0;
 	struct child_config	*cc,
 				*up;
 
@@ -943,55 +957,62 @@ c_updt(struct client_con *con, char *buf)
 		return 1;
 	}
 
-	if (cc->cc_dir != NULL) {
+	if (cc->cc_dir != NULL && xstrcmp(cc->cc_dir, up->cc_dir)) {
 		slog("[update] %s dir \"%s\" -> \"%s\"\n", up->cc_name,
 				up->cc_dir, cc->cc_dir);
+		changed = 1;
 		if (up->cc_dir)
 			free(up->cc_dir);
 		up->cc_dir = xstrdup(cc->cc_dir);
 	}
 
-	if (cc->cc_heartbeat != NULL) {
+	if (cc->cc_heartbeat != NULL && xstrcmp(cc->cc_heartbeat, up->cc_heartbeat)) {
 		slog("[update] %s heartbeat \"%s\" -> \"%s\"\n", up->cc_name,
 				up->cc_heartbeat, cc->cc_heartbeat);
+		changed = 1;
 		if (up->cc_heartbeat)
 			free(up->cc_heartbeat);
 		up->cc_heartbeat = xstrdup(cc->cc_heartbeat);
 	}
 
-	if (cc->cc_fatal_cb != NULL) {
+	if (cc->cc_fatal_cb != NULL && xstrcmp(cc->cc_fatal_cb, up->cc_fatal_cb)) {
 		slog("[update] %s fatal_cb \"%s\" -> \"%s\"\n", up->cc_name,
 				up->cc_fatal_cb, cc->cc_fatal_cb);
+		changed = 1;
 		if (up->cc_fatal_cb)
 			free(up->cc_fatal_cb);
 		up->cc_fatal_cb = xstrdup(cc->cc_fatal_cb);
 	}
 
-	if (cc->cc_stdout != NULL) {
+	if (cc->cc_stdout != NULL && xstrcmp(cc->cc_stdout, up->cc_stdout)) {
 		slog("[update] %s stdout \"%s\" -> \"%s\"\n", up->cc_name,
 				up->cc_stdout, cc->cc_stdout);
+		changed = 1;
 		if (up->cc_stdout != NULL)
 			free(up->cc_stdout);
 		up->cc_stdout = xstrdup(cc->cc_stdout);
 	}
 
-	if (cc->cc_stderr != NULL) {
+	if (cc->cc_stderr != NULL && xstrcmp(cc->cc_stderr, up->cc_stderr)) {
 		slog("[update] %s stderr \"%s\" -> \"%s\"\n", up->cc_name,
 				up->cc_stderr, cc->cc_stderr);
+		changed = 1;
 		if (up->cc_stderr != NULL)
 			free(up->cc_stderr);
 		up->cc_stderr = xstrdup(cc->cc_stderr);
 	}
 
-	if (cc->cc_killsig != -1) {
+	if (cc->cc_killsig != -1 && cc->cc_killsig != up->cc_killsig) {
 		slog("[update] %s killsig %d -> %d\n", up->cc_name,
 				up->cc_killsig, cc->cc_killsig);
+		changed = 1;
 		up->cc_killsig = cc->cc_killsig;
 	}
 
-	if (cc->cc_instances != -1) {
+	if (cc->cc_instances != -1 && cc->cc_instances != up->cc_instances) {
 		slog("[update] %s instances %d -> %d\n", up->cc_name,
 				up->cc_instances, cc->cc_instances);
+		changed = 1;
 		if (cc->cc_instances > up->cc_instances) {
 			up->cc_childs = xrealloc(up->cc_childs,
 					sizeof(struct process *) * cc->cc_instances);
@@ -1017,9 +1038,10 @@ c_updt(struct client_con *con, char *buf)
 		}
 	}
 
-	if (cc->cc_status != -1) {
+	if (cc->cc_status != -1 && cc->cc_status != up->cc_status) {
 		slog("[update] %s status %d -> %d\n", up->cc_name,
 				up->cc_status, cc->cc_status);
+		changed = 1;
 		up->cc_error = 0;
 		if (up->cc_status != STATUS_RUNNING
 				&& cc->cc_status == STATUS_RUNNING) {
@@ -1032,13 +1054,17 @@ c_updt(struct client_con *con, char *buf)
 		send_status_update_notification(up->cc_name, up->cc_status);
 	}
 
-	if (cc->cc_age > 0) {
+	if (cc->cc_age > 0 && cc->cc_age != up->cc_age) {
 		slog("[update] %s age %d -> %d\n", up->cc_name,
 				up->cc_age, cc->cc_age);
+		changed = 1;
 		up->cc_age = cc->cc_age;
 	}
 
 	child_config_free(cc);
+
+	if (changed)
+		send_group_cfg_update_notification(up);
 
 	if (!auto_dump)
 		send_status_msg(con, 1, "success");

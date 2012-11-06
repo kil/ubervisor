@@ -358,7 +358,7 @@ class UbervisorClient(object):
 
     def update(self, name, stdout = None, stderr = None,
             instances = None, status = None, killsig = None,
-            heartbeat = None, fatal_cb = None, age = None, wait = True):
+            heartbeat = None, fatal_cb = None, age = None, dir = None, wait = True):
         """
         Create a new process group and start it.
 
@@ -391,6 +391,8 @@ class UbervisorClient(object):
             d['fatal_cb'] = fatal_cb
         if age != None:
             d['age'] = age
+        if dir != None:
+            d['dir'] = dir
         d = dumps(d)
         x = self._send('UPDT', d)
         if not wait:
