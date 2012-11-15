@@ -117,8 +117,16 @@ class UbervisorClient(object):
     """
     _SOCK_FILE = '%s/.uber/socket'
 
+    def _increment_cid(self):
+        while True:
+            self.cid += 1
+            if self.cid > 65535:
+                self.cid = 0
+            if not self.cid in self._inuse_cids:
+                break
+
     def _send(self, d, p = ''):
-        self.cid += 1
+        self._increment_cid()
         self.s.sendall(pack('!HH', len(d) + len(p), self.cid) + d + p)
         return self.cid
 
@@ -190,6 +198,7 @@ class UbervisorClient(object):
                                     ``UBERVISOR_RSH`` environment variable of
                                     ubervisor).
         """
+        self._inuse_cids = []
         self.host = host
         if not host:
             self.sock_file = sock_file or self._SOCK_FILE % getpwuid(geteuid())[5]
@@ -412,6 +421,7 @@ class UbervisorClient(object):
         """
         d = dumps(dict(ident = ident))
         x = self._send('SUBS', d)
+        self._inuse_cids.append(x)
         if not wait:
             return x
         r = self._reply(x)
