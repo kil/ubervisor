@@ -58,6 +58,10 @@ SET (CMAKE_C_FLAGS "")
 SET (CMAKE_C_FLAGS_RELEASE "-Wall -O2 -DNDEBUG")
 SET (CMAKE_C_FLAGS_DEBUG "-Wall -Wextra -g -ggdb -DDEBUG -Wunused -Wcast-align -Wcast-qual -Wchar-subscripts -Wnested-externs -Wpointer-arith -Wbad-function-cast -Wredundant-decls -Wshadow -Wstrict-prototypes -Wwrite-strings")
 
+IF(CLANG_ASAN)
+	ADD_DEFINITIONS("-faddress-sanitizer")
+ENDIF(CLANG_ASAN)
+
 IF(CLANG_ANALYZE)
 	ADD_DEFINITIONS("--analyze")
 ENDIF(CLANG_ANALYZE)
