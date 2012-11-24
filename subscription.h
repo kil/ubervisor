@@ -50,7 +50,7 @@ struct subscription {
 	LIST_ENTRY(subscription)	s_ent;
 	struct client_con		*s_client;
 	uint16_t			s_ident,
-					s_channel;
+					s_cid;
 };
 
 LIST_HEAD(subscription_list, subscription);

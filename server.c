@@ -285,7 +285,7 @@ send_notification(int n, const char *ret)
 							sizeof(uint16_t)) == -1)
 					break;
 				if (bufferevent_write(s->s_client->c_be,
-							&s->s_channel,
+							&s->s_cid,
 							sizeof(uint16_t)) == -1)
 					break;
 				bufferevent_write(s->s_client->c_be, ret, ret_len);
@@ -1460,7 +1460,7 @@ c_getc(struct client_con *con, char *buf)
 }
 
 /*
- * channel subscription command handler.
+ * subscription command handler.
  */
 static int
 c_subs(struct client_con *con, char *buf)
@@ -1506,7 +1506,7 @@ c_subs(struct client_con *con, char *buf)
 	subs = xmalloc(sizeof(struct subscription));
 	subs->s_client = con;
 	subs->s_ident = ident;
-	subs->s_channel = con->c_cid;
+	subs->s_cid = con->c_cid;
 	subscription_insert(&subscription_list_head, subs);
 	send_status_msg(con, 1, "success");
 	return 1;
@@ -1612,8 +1612,29 @@ c_pids(struct client_con *con, char *buf)
 static int
 c_helo(struct client_con *con, char *unused __attribute__((unused)))
 {
-	if (bufferevent_write(con->c_be, "HELO", 4) == -1)
-		slog("HELO failed.\n");
+	const char		*ret;
+	ssize_t			ret_len;
+	json_object		*obj,
+				*c,
+				*m;
+
+	obj = json_object_new_object();
+
+	c = json_object_new_boolean(1);
+	json_object_object_add(obj, "code", c);
+
+	m = json_object_new_string("ok");
+	json_object_object_add(obj, "msg", m);
+
+	m = json_object_new_string(UV_VERSION DEBUG_VERSION);
+	json_object_object_add(obj, "version", m);
+
+	ret = json_object_to_json_string(obj);
+	ret_len = strlen(ret);
+
+	send_message(con, ret, ret_len);
+
+	json_object_put(obj);
 	return 1;
 }
 

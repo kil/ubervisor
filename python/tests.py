@@ -711,7 +711,6 @@ class TestAsync(BaseTest):
         msg = self.waitfor(c)
         self.assertEqual(msg['age'], 20)
 
-
 class TestBigMsg(BaseTest):
     def test_big_reply(self):
         cmd = ['/bin/sleep', '1']

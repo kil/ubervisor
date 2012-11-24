@@ -28,6 +28,12 @@
 #ifndef __SERVER_H
 #define __SERVER_H
 
+#ifdef DEBUG
+#define DEBUG_VERSION	"-debug"
+#else
+#define DEBUG_VERSION	""
+#endif
+
 #define CHUNKEXT		0x8000
 #define CHUNKRESERVED		0x4000
 #define CHUNKSIZ		0x3fff

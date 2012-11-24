@@ -136,6 +136,12 @@ class UbervisorClient(object):
             raise UbervisorClientException("cid don't match")
         return d
 
+    def _recv_chunk(self, r):
+        s = ''
+        while len(s) < r:
+            s += self.s.recv(r - len(s))
+        return s
+
     def wait(self):
         """
         Wait for command reply from server.
@@ -149,9 +155,7 @@ class UbervisorClient(object):
                 raise UbervisorClientException('reply error')
             l, cid = unpack('!HH', b)
             r = (l & CHUNKSIZ)
-            s = ''
-            while len(s) < r:
-                s += self.s.recv(r - len(s))
+            s = self._recv_chunk(r)
             x += s
             if not (l & CHUNKEXT):
                 break
@@ -164,6 +168,18 @@ class UbervisorClient(object):
         """Close connection to server."""
         self.s.close()
 
+    def helo(self):
+        self._send('HELO')
+        b = self.s.recv(4)
+        if b != 'HELO':
+            l, cid = unpack('!HH', b)
+            r = (l & CHUNKSIZ)
+            s = self._recv_chunk(r)
+            o = loads(s)
+            assert o['msg'] == 'ok'
+            assert o['code'] == True
+            self.server_version = o['version']
+
     def connect(self):
         """Open connection to server."""
         self.cid = 1
@@ -173,10 +189,6 @@ class UbervisorClient(object):
         else:
             self.s = SSHSock(self.host, self.user, self.key, self.sock_cmd)
             self.s.connect()
-
-        self._send('HELO')
-        if self.s.recv(4) != 'HELO':
-            raise UbervisorClientException("HELO failed")
 
     def __init__(self, sock_file = None, host = None, user = None, key = None,
             command = [UBERVISOR_CMD, 'proxy']):
@@ -211,6 +223,7 @@ class UbervisorClient(object):
             if sock_file:
                 self.sock_cmd += ['-s', sock_file]
         self.connect()
+        self.helo()
 
     def start(self, name, args, dir = None, stdout = None, stderr = None,
             instances = 1, status = STATUS_RUNNING, killsig = 15, uid = -1,

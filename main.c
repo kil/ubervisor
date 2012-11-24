@@ -38,12 +38,6 @@
 #include "cmd_subscribe.h"
 #include "cmd_read.h"
 
-#ifdef DEBUG
-#define DEBUG_VERSION	"-debug"
-#else
-#define DEBUG_VERSION	""
-#endif
-
 #define AUTHOR		"Kilian Klimek <kilian.klimek@googlemail.com>"
 #ifdef DEBUG
 const char		*_malloc_options = "J";

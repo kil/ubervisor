@@ -50,7 +50,7 @@ int read_reply(int sock, char *buf, size_t buf_siz)
 {
 	int		r;
 	uint16_t	len,
-			channel,
+			cid,
 			off = 0;
 
 	if ((r = read(sock, &len, 2)) < 0)
@@ -59,7 +59,7 @@ int read_reply(int sock, char *buf, size_t buf_siz)
 	if (r < 2)
 		return -1;
 
-	if ((r = read(sock, &channel, 2)) < 0)
+	if ((r = read(sock, &cid, 2)) < 0)
 		die("read");
 
 	if (r < 2)
@@ -219,7 +219,7 @@ int
 sock_send_command(int sock, const char *cmd, const char *pl)
 {
 	uint16_t	len = 0,
-			channel = ntohs(1);
+			cid = ntohs(1);
 
 	len = strlen(cmd);
 
@@ -227,7 +227,7 @@ sock_send_command(int sock, const char *cmd, const char *pl)
 		len += strlen(pl);
 	if (sock_write_len(sock, len) == -1)
 		return -1;
-	if (sock_write_len(sock, channel) == -1)
+	if (sock_write_len(sock, cid) == -1)
 		return -1;
 	if (sock_write(sock, cmd) == -1)
 		return -1;
@@ -241,28 +241,68 @@ sock_send_command(int sock, const char *cmd, const char *pl)
 int
 sock_send_helo(void)
 {
-	int		s;
+	int		s,
+			r;
 	const char	*msg = "HELO";
-	char		buf[5];
+	char		buf[128];
+
+	json_object	*obj,
+			*m;
+
+
 
 	if ((s = sock_connect()) == -1)
 		return -1;
+
 	if (sock_write_len(s, 4) == -1) {
 		close(s);
 		return -1;
 	}
+
 	if (sock_write_len(s, 1) == -1) {
 		close(s);
 		return -1;
 	}
+
 	if (sock_write(s, msg) == -1) {
 		close(s);
 		return -1;
 	}
-	if (read(s, buf, 4) != 4) {
+
+	r = read_reply(s, buf, 128);
+
+	if (!r) {
 		close(s);
 		return -1;
 	}
+
+	if ((obj = json_tokener_parse(buf)) == NULL) {
+		fprintf(stderr, "Failed to parse reply.\n");
+		return -1;
+	}
+
+	if (is_error(obj)) {
+		fprintf(stderr, "Failed to parse reply.\n");
+		return -1;
+	}
+
+	if ((m = json_object_object_get(obj, "code")) == NULL) {
+		fprintf(stderr, "Failed to parse reply.\n");
+		return -1;
+	}
+
+	r = json_object_get_boolean(m);
+
+	if ((m = json_object_object_get(obj, "msg")) == NULL) {
+		fprintf(stderr, "Failed to parse reply.\n");
+		return -1;
+	}
+
+	if (r != 1) {
+		fprintf(stderr, "Error: %s\n", json_object_get_string(m));
+	}
+
+	json_object_put(obj);
 	close(s);
 	return 1;
 }
