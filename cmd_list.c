@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011 Kilian Klimek <kilian.klimek@googlemail.com>
+ * Copyright (c) 2011-2013 Kilian Klimek <kilian.klimek@googlemail.com>
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -25,14 +25,71 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef __CLIENT_H
-#define __CLIENT_H
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <unistd.h>
 
-int sock_send_helo(void);
-int get_status_reply(int);
-int sock_connect(void);
-int sock_write_len(int, unsigned short);
-int sock_send_command(int, const char *, const char *);
-int read_reply(int, char *, size_t);
+#include <json/json.h>
 
-#endif /* __CLIENT_H */
+#include "main.h"
+#include "client.h"
+#include "misc.h"
+
+int
+cmd_list(int argc, char **argv)
+{
+	int		sock,
+			len,
+			i;
+
+	char		buf[BUFFER_SIZ];
+
+	json_object	*obj,
+			*n;
+
+	if (argc > 1) {
+		fprintf(stderr, "%s takes no options.\n", argv[0]);
+		return 1;
+	}
+
+	if ((sock = sock_connect()) == -1) {
+		fprintf(stderr, "server not running?\n");
+		return 1;
+	}
+
+	if (sock_send_command(sock, "LIST", NULL) == -1) {
+		fprintf(stderr, "failed.\n");
+		return 1;
+	}
+
+
+	if (read_reply(sock, buf, BUFFER_SIZ) == -1) {
+		fprintf(stderr, "Failed to read reply.\n");
+		return 1;
+	}
+
+	close(sock);
+
+	if ((obj = json_tokener_parse(buf)) == NULL) {
+		fprintf(stderr, "Failed to parse reply.\n");
+		return 1;
+	}
+
+	if (!json_object_is_type(obj, json_type_array)) {
+		fprintf(stderr, "Failed to parse reply.\n");
+		return 1;
+	}
+
+	len = json_object_array_length(obj);
+
+	for (i = 0; i < len; i++) {
+		if ((n = json_object_array_get_idx(obj, i)) == NULL) {
+			fprintf(stderr, "Failed to parse reply.\n");
+			return 1;
+		}
+		printf("%s\n", json_object_get_string(n));
+	}
+
+	return 0;
+}

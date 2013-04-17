@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011 Kilian Klimek <kilian.klimek@googlemail.com>
+ * Copyright (c) 2011-2013 Kilian Klimek <kilian.klimek@googlemail.com>
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -25,14 +25,38 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef __CLIENT_H
-#define __CLIENT_H
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <unistd.h>
 
-int sock_send_helo(void);
-int get_status_reply(int);
-int sock_connect(void);
-int sock_write_len(int, unsigned short);
-int sock_send_command(int, const char *, const char *);
-int read_reply(int, char *, size_t);
+#include <json/json.h>
 
-#endif /* __CLIENT_H */
+#include "main.h"
+#include "client.h"
+
+int
+cmd_dump(int argc, char **argv)
+{
+	int		sock,
+			ret;
+
+	if (argc > 1) {
+		fprintf(stderr, "%s takes no options.\n", argv[0]);
+		return 1;
+	}
+
+	if ((sock = sock_connect()) == -1) {
+		fprintf(stderr, "server not running?\n");
+		return 1;
+	}
+
+	if (sock_send_command(sock, "DUMP", NULL) == -1) {
+		fprintf(stderr, "failed.\n");
+		return 1;
+	}
+
+	ret = get_status_reply(sock);
+	close(sock);
+	return ret;
+}

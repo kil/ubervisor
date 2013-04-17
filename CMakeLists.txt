@@ -98,9 +98,10 @@ INCLUDE_DIRECTORIES(.
 	${JSON_INCLUDE_DIR})
 
 ADD_EXECUTABLE(ubervisor
-	child_config.c client.c cmd_start.c cmd_update.c main.c misc.c server.c
+	child_config.c client.c cmd_start.c cmd_update.c main.c misc.c cmd_server.c
 	cmd_get.c cmd_proxy.c subscription.c cmd_subscribe.c process.c uvhash.c
-	cmd_read.c)
+	cmd_read.c cmd_exit.c cmd_pids.c cmd_list.c cmd_dump.c cmd_delete.c
+	cmd_kill.c)
 
 TARGET_LINK_LIBRARIES(ubervisor
 	${EVENT_LIBRARIES}

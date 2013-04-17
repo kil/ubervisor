@@ -59,7 +59,7 @@
 #include "subscription.h"
 #include "process.h"
 #include "uvhash.h"
-#include "server.h"
+#include "cmd_server.h"
 
 #ifdef HAVE_SYS_QUEUE_H
 #include <sys/queue.h>

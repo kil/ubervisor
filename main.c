@@ -29,7 +29,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "server.h"
+#include "cmd_server.h"
 #include "client.h"
 #include "cmd_start.h"
 #include "cmd_update.h"
@@ -37,6 +37,12 @@
 #include "cmd_proxy.h"
 #include "cmd_subscribe.h"
 #include "cmd_read.h"
+#include "cmd_exit.h"
+#include "cmd_pids.h"
+#include "cmd_list.h"
+#include "cmd_dump.h"
+#include "cmd_delete.h"
+#include "cmd_kill.h"
 
 #define AUTHOR		"Kilian Klimek <kilian.klimek@googlemail.com>"
 #ifdef DEBUG

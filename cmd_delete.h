@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011 Kilian Klimek <kilian.klimek@googlemail.com>
+ * Copyright (c) 2013 Kilian Klimek <kilian.klimek@googlemail.com>
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -25,14 +25,9 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef __CLIENT_H
-#define __CLIENT_H
+#ifndef __CMD_DELETE_H
+#define __CMD_DELETE_H
 
-int sock_send_helo(void);
-int get_status_reply(int);
-int sock_connect(void);
-int sock_write_len(int, unsigned short);
-int sock_send_command(int, const char *, const char *);
-int read_reply(int, char *, size_t);
+int cmd_delete(int, char **);
 
-#endif /* __CLIENT_H */
+#endif /* __CMD_DELETE_H */
