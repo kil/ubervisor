@@ -137,10 +137,15 @@ class UbervisorClient(object):
         return d
 
     def _recv_chunk(self, r):
-        s = ''
-        while len(s) < r:
-            s += self.s.recv(r - len(s))
-        return s
+        s = []
+        s_len = 0
+        while s_len < r:
+            p = self.s.recv(r - s_len)
+            if not p:
+                break
+            s.append(p)
+            s_len += len(p)
+        return ''.join(s)
 
     def wait(self):
         """
