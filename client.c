@@ -54,13 +54,13 @@ int read_reply(int sock, char *buf, size_t buf_siz)
 			off = 0;
 
 	if ((r = read(sock, &len, 2)) < 0)
-		die("read");
+		return -1;
 
 	if (r < 2)
 		return -1;
 
 	if ((r = read(sock, &cid, 2)) < 0)
-		die("read");
+		return -1;
 
 	if (r < 2)
 		return -1;
@@ -72,7 +72,6 @@ int read_reply(int sock, char *buf, size_t buf_siz)
 
 	while (off < len) {
 		r = read(sock, buf + off, len - off);
-		off += r;
 		if (r <= 0)
 			return -1;
 		off += r;
