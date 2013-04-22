@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2012 Kilian Klimek <kilian.klimek@googlemail.com>
+ * Copyright (c) 2011-2013 Kilian Klimek <kilian.klimek@googlemail.com>
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -190,7 +190,7 @@ help_server(void)
 }
 
 
-int
+static int
 open_server_log(void) {
 	FILE		*fd;
 	int		r;
