@@ -2157,7 +2157,7 @@ cmd_server(int argc, char **argv)
 	struct passwd		*pw;
 	struct stat		st;
 	socklen_t		addr_len;
-	char			sock_path[PATH_MAX],
+	char			tmp[PATH_MAX],
 				*dump_file = NULL,
 				*sock_path_ptr,
 				*dir = NULL;
@@ -2262,10 +2262,21 @@ cmd_server(int argc, char **argv)
 		unsetenv("UBERVISOR_RSH");
 	}
 
-	if (sock_send_helo() != -1) {
-		if (!silent)
-			fprintf(stderr, "server running?\n");
-		return 1;
+	sock_path_ptr = sock_path();
+
+	errno = 0;
+	if ((fd = sock_connect()) != -1) {
+		if (sock_send_helo(fd) != -1) {
+			if (!silent)
+				fprintf(stderr, "server running?\n");
+			return 1;
+		}
+	}
+
+	if (errno == EACCES) {
+		snprintf(tmp, sizeof(tmp), "Can't access socket \"%s\"",
+				sock_path_ptr);
+		die(tmp);
 	}
 
 	if (dir) {
@@ -2273,39 +2284,40 @@ cmd_server(int argc, char **argv)
 		if (chdir(dir) == -1)
 			die("chdir");
 	} else {
-		r = snprintf(sock_path, PATH_MAX, BASE_DIR, pw->pw_dir);
+		r = snprintf(tmp, PATH_MAX, BASE_DIR, pw->pw_dir);
 		if (r < 0 || r >= PATH_MAX)
 			die("snprintf");
 
-		if (stat(sock_path, &st) == -1) {
-			if (mkdir(sock_path, S_IRWXU) == -1)
+		if (stat(tmp, &st) == -1) {
+			if (mkdir(tmp, S_IRWXU) == -1)
 				die("mkdir");
 		}
-		printf("chdir to: %s\n", sock_path);
-		if (chdir(sock_path) == -1)
+		printf("chdir to: %s\n", tmp);
+		if (chdir(tmp) == -1)
 			die("chdir");
 	}
 
 	/* log file */
 	if (server_logfile == NULL && do_fork) {
-		r = snprintf(sock_path, PATH_MAX, LOG_PATH, pw->pw_dir);
+		r = snprintf(tmp, PATH_MAX, LOG_PATH, pw->pw_dir);
 		if (r < 0 || r >= PATH_MAX)
 			die("snprintf");
-		server_logfile = xstrdup(sock_path);
+		server_logfile = xstrdup(tmp);
 	}
 
 	if (server_logfile)
 		printf("logfile: %s\n", server_logfile);
 
-	/* socket file in dir */
-	if ((sock_path_ptr = getenv("UBERVISOR_SOCKET")) == NULL) {
-		r = snprintf(sock_path, PATH_MAX, SOCK_PATH, pw->pw_dir);
-		if (r < 0 || r >= PATH_MAX)
-			die("snprintf");
-		sock_path_ptr = sock_path;
+	if (stat(sock_path_ptr, &st) != -1) {
+		if (!S_ISSOCK(st.st_mode)) {
+			fprintf(stderr, "Refusing to delete non-socket \"%s\"\n", sock_path_ptr);
+			return -1;
+		}
+		if (unlink(sock_path_ptr) == -1) {
+			snprintf(tmp, sizeof(tmp), "Can't delete existing socket \"%s\"", sock_path_ptr);
+			die(tmp);
+		}
 	}
-
-	unlink(sock_path_ptr);
 
 	if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1)
 		die("socket");

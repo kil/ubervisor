@@ -126,6 +126,32 @@ get_status_reply(int sock)
 	return 0;
 }
 
+char *
+sock_path(void)
+{
+	static char		_sock_path[PATH_MAX];
+	char			*ptr;
+	struct passwd		*pw;
+	int			ret;
+
+
+	ptr = getenv("UBERVISOR_SOCKET");
+
+	if (ptr == NULL) {
+		if ((pw = getpwuid(geteuid())) == NULL)
+			return NULL;
+		ret = snprintf(_sock_path, PATH_MAX, SOCK_PATH, pw->pw_dir);
+		if (ret == -1 || ret >= PATH_MAX)
+			return NULL;
+	} else {
+		if (strlen(ptr) >= PATH_MAX - 1)
+			return NULL;
+		strncpy(_sock_path, ptr, PATH_MAX);
+	}
+
+	return _sock_path;
+}
+
 int
 sock_connect(void)
 {
@@ -134,12 +160,10 @@ sock_connect(void)
 	struct sockaddr_un	addr;
 	socklen_t		addr_len;
 	pid_t			pid;
-	char			sock_path[PATH_MAX],
-				*ptr;
+	char			*ptr;
 	char			arg0[] = "/bin/sh",
 				arg1[] = "-c";
 	char			*args[4] = {arg0, arg1, NULL, NULL};
-	struct passwd		*pw;
 
 
 	if ((ptr = getenv("UBERVISOR_RSH")) != NULL) {
@@ -169,14 +193,8 @@ sock_connect(void)
 		return pp[1];
 	}
 
-	if ((ptr = getenv("UBERVISOR_SOCKET")) == NULL) {
-		if ((pw = getpwuid(geteuid())) == NULL)
-			die("getpwuid");
-		ret = snprintf(sock_path, PATH_MAX, SOCK_PATH, pw->pw_dir);
-		if (ret == -1 || ret >= PATH_MAX)
-			die("snprintf");
-		ptr = sock_path;
-	}
+	if ((ptr = sock_path()) == NULL)
+		return -1;
 
 	if (strlen(ptr) >= sizeof(addr.sun_path)) {
 		fprintf(stderr, "socket path too long\n");
@@ -238,10 +256,9 @@ sock_send_command(int sock, const char *cmd, const char *pl)
 }
 
 int
-sock_send_helo(void)
+sock_send_helo(int s)
 {
-	int		s,
-			r;
+	int		r;
 	const char	*msg = "HELO";
 	char		buf[128];
 
@@ -249,24 +266,8 @@ sock_send_helo(void)
 			*m;
 
 
-
-	if ((s = sock_connect()) == -1)
+	if (sock_send_command(s, msg, NULL) != 0)
 		return -1;
-
-	if (sock_write_len(s, 4) == -1) {
-		close(s);
-		return -1;
-	}
-
-	if (sock_write_len(s, 1) == -1) {
-		close(s);
-		return -1;
-	}
-
-	if (sock_write(s, msg) == -1) {
-		close(s);
-		return -1;
-	}
 
 	r = read_reply(s, buf, 128);
 

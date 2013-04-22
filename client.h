@@ -28,8 +28,9 @@
 #ifndef __CLIENT_H
 #define __CLIENT_H
 
-int sock_send_helo(void);
+int sock_send_helo(int);
 int get_status_reply(int);
+char *sock_path(void);
 int sock_connect(void);
 int sock_write_len(int, unsigned short);
 int sock_send_command(int, const char *, const char *);
