@@ -2342,7 +2342,7 @@ cmd_server(int argc, char **argv)
 		log_fd = NULL;
 	}
 
-	/* check if we can open the dumpfile before we work. */
+	/* check if we can open the dumpfile before we fork. */
 	if (dump_file != NULL) {
 		if ((tmp_fd = fopen(dump_file, "r")) == NULL)
 			die("fopen");
