@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011 Kilian Klimek <kilian.klimek@googlemail.com>
+ * Copyright (c) 2011-2013 Kilian Klimek <kilian.klimek@googlemail.com>
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -85,7 +85,7 @@ help_start(void)
 	printf("Examples:\n");
 	printf("\tuber start -o /tmp/stdout sleeper /bin/sleep 4\n");
 	printf("\n");
-	exit(1);
+	exit(EXIT_FAILURE);
 }
 
 int
@@ -184,15 +184,16 @@ cmd_start(int argc, char **argv)
 
 	if ((sock = sock_connect()) == -1) {
 		printf("server running?\n");
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	if (sock_send_command(sock, "SPWN", b) == -1) {
 		printf("failed to send command.\n");
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	ret = get_status_reply(sock);
 	close(sock);
+	/* lazily using return value from get_status_reply */
 	return ret;
 }

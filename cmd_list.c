@@ -50,35 +50,35 @@ cmd_list(int argc, char **argv)
 
 	if (argc > 1) {
 		fprintf(stderr, "%s takes no options.\n", argv[0]);
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	if ((sock = sock_connect()) == -1) {
 		fprintf(stderr, "server not running?\n");
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	if (sock_send_command(sock, "LIST", NULL) == -1) {
 		fprintf(stderr, "failed.\n");
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 
 	if (read_reply(sock, buf, BUFFER_SIZ) == -1) {
 		fprintf(stderr, "Failed to read reply.\n");
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	close(sock);
 
 	if ((obj = json_tokener_parse(buf)) == NULL) {
 		fprintf(stderr, "Failed to parse reply.\n");
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	if (!json_object_is_type(obj, json_type_array)) {
 		fprintf(stderr, "Failed to parse reply.\n");
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	len = json_object_array_length(obj);
@@ -86,10 +86,10 @@ cmd_list(int argc, char **argv)
 	for (i = 0; i < len; i++) {
 		if ((n = json_object_array_get_idx(obj, i)) == NULL) {
 			fprintf(stderr, "Failed to parse reply.\n");
-			return 1;
+			return EXIT_FAILURE;
 		}
 		printf("%s\n", json_object_get_string(n));
 	}
 
-	return 0;
+	return EXIT_SUCCESS;
 }

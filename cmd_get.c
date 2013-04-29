@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011 Kilian Klimek <kilian.klimek@googlemail.com>
+ * Copyright (c) 2011-2013 Kilian Klimek <kilian.klimek@googlemail.com>
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -77,7 +77,7 @@ help_get(void)
 	printf("\t-s, --status     print status.\n");
 	printf("\t-u, --uid        print uid processes are started with.\n");
 	printf("\n");
-	exit(1);
+	exit(EXIT_FAILURE);
 }
 
 int
@@ -179,49 +179,49 @@ cmd_get(int argc, char **argv)
 
 	if ((sock = sock_connect()) == -1) {
 		fprintf(stderr, "server not running?\n");
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	if (sock_send_command(sock, "GETC", msg) == -1) {
 		fprintf(stderr, "failed to send command.\n");
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	free(msg);
 
 	if (read_reply(sock, buf, BUFFER_SIZ) == -1) {
 		fprintf(stderr, "failed to read reply.\n");
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	if (dump) {
 		printf("%s\n", buf);
-		return 0;
+		return EXIT_SUCCESS;
 	}
 
 	if ((obj = json_tokener_parse(buf)) == NULL) {
 		fprintf(stderr, "failed.\n");
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	if (is_error(obj)) {
 		fprintf(stderr, "failed.\n");
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	if (!json_object_is_type(obj, json_type_object)) {
 		fprintf(stderr, "failed.\n");
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 #define GETSTR(X,Y)	if (Y) { \
 				if ((n = json_object_object_get(obj, X)) == NULL) { \
 					fprintf(stderr, "failed.\n"); \
-					return 1; \
+					return EXIT_FAILURE; \
 				} \
 				if (!json_object_is_type(n, json_type_string)) { \
 					fprintf(stderr, "failed.\n"); \
-					return 1; \
+					return EXIT_FAILURE; \
 				} \
 				printf("%s\n", json_object_get_string(n)); \
 			}
@@ -229,11 +229,11 @@ cmd_get(int argc, char **argv)
 #define GETINT(X,Y)	if (Y) { \
 				if ((n = json_object_object_get(obj, X)) == NULL) { \
 					fprintf(stderr, "failed.\n"); \
-					return 1; \
+					return EXIT_FAILURE; \
 				} \
 				if (!json_object_is_type(n, json_type_int)) { \
 					fprintf(stderr, "failed.\n"); \
-					return 1; \
+					return EXIT_FAILURE; \
 				} \
 				printf("%d\n", json_object_get_int(n)); \
 			}
@@ -251,5 +251,5 @@ cmd_get(int argc, char **argv)
 	GETINT("status", get_status);
 	GETINT("instances", get_instances);
 	GETINT("killsig", get_killsig);
-	return 0;
+	return EXIT_SUCCESS;
 }

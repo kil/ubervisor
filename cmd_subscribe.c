@@ -2,7 +2,7 @@
  * Copyright (c) 2011 Whitematter Labs GmbH
  * All rights reserved.
  * 
- * Copyright (c) 2011 Kilian Klimek <kilian.klimek@googlemail.com>
+ * Copyright (c) 2011-2013 Kilian Klimek <kilian.klimek@googlemail.com>
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -57,7 +57,7 @@ help_subscribe(void)
 	printf("\n");
 	printf("Ident:\n");
 	printf("\t1:\t server log.\n");
-	exit(1);
+	exit(EXIT_FAILURE);
 }
 
 int
@@ -109,19 +109,19 @@ cmd_subscribe(int argc, char **argv)
 
 	if ((sock = sock_connect()) == -1) {
 		fprintf(stderr, "server not running?\n");
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	if (sock_send_command(sock, "SUBS", msg) == -1) {
 		fprintf(stderr, "failed to send command.\n");
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	free(msg);
 
 	if (read_reply(sock, buf, BUFFER_SIZ) == -1) {
 		fprintf(stderr, "failed to read reply.\n");
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	while (1) {
@@ -147,5 +147,5 @@ cmd_subscribe(int argc, char **argv)
 		printf("[%d] %s", cid, buf);
 	}
 
-	return 0;
+	return EXIT_SUCCESS;
 }

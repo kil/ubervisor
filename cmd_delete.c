@@ -55,7 +55,7 @@ cmd_delete(int argc, char **argv)
 
 	if (argc < 2) {
 		printf("Usage: %s %s <name>\n", program_name, argv[0]);
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	obj = json_object_new_object();
@@ -68,29 +68,29 @@ cmd_delete(int argc, char **argv)
 
 	if ((sock = sock_connect()) == -1) {
 		fprintf(stderr, "server not running?\n");
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	if (sock_send_command(sock, "DELE", msg) == -1) {
 		fprintf(stderr, "write\n");
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	free(msg);
 
 	if (read_reply(sock, buf, BUFFER_SIZ) == -1) {
 		fprintf(stderr, "Failed to parse reply.\n");
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	if ((obj = json_tokener_parse(buf)) == NULL) {
 		fprintf(stderr, "Failed to parse reply.\n");
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	if ((n = json_object_object_get(obj, "code")) == NULL) {
 		fprintf(stderr, "Failed to parse reply.\n");
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	ret = json_object_get_boolean(n);
@@ -99,12 +99,12 @@ cmd_delete(int argc, char **argv)
 	if (ret == 0) {
 		fprintf(stderr, "failed\n");
 		close(sock);
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	if ((n = json_object_object_get(obj, "pids")) == NULL) {
 		fprintf(stderr, "Failed to parse reply.\n");
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	len = json_object_array_length(n);

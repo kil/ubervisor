@@ -186,7 +186,7 @@ help_server(void)
 	printf("Examples:\n");
 	printf("\tubervisor server -d /tmp\n");
 	printf("\n");
-	exit(1);
+	exit(EXIT_FAILURE);
 }
 
 
@@ -452,40 +452,40 @@ spawn_child_setids(struct child_config *cc)
 
 	if (cc->cc_username != NULL) {
 		if ((pw = getpwnam(cc->cc_username)) == NULL)
-			exit(1);
+			exit(EXIT_FAILURE);
 		cc->cc_uid = pw->pw_uid;
 	}
 
 	if (cc->cc_groupname != NULL) {
 		 if ((gr = getgrnam(cc->cc_groupname)) == NULL)
-			 exit(1);
+			 exit(EXIT_FAILURE);
 		 cc->cc_gid = gr->gr_gid;
 	}
 
 	if (cc->cc_gid != -1) {
 		if (setgid(cc->cc_gid) != 0)
-			exit(1);
+			exit(EXIT_FAILURE);
 
 		if (setegid(cc->cc_gid) != 0)
-			exit(1);
+			exit(EXIT_FAILURE);
 	}
 
 	if (cc->cc_uid != -1) {
 		if (setuid(cc->cc_uid) != 0)
-			exit(1);
+			exit(EXIT_FAILURE);
 
 		if (seteuid(cc->cc_uid) != 0)
-			exit(1);
+			exit(EXIT_FAILURE);
 
 		if (cc->cc_uid != 0) {
 			if (setuid(0) != -1)
-				exit(1);
+				exit(EXIT_FAILURE);
 		}
 	}
 
 	if (cc->cc_gid > 0) {
 		if (setgid(0) != -1)
-			exit(1);
+			exit(EXIT_FAILURE);
 	}
 }
 
@@ -2269,7 +2269,7 @@ cmd_server(int argc, char **argv)
 		if (sock_send_helo(fd) != -1) {
 			if (!silent)
 				fprintf(stderr, "server running?\n");
-			return 1;
+			return EXIT_FAILURE;
 		}
 	}
 
@@ -2311,7 +2311,7 @@ cmd_server(int argc, char **argv)
 	if (stat(sock_path_ptr, &st) != -1) {
 		if (!S_ISSOCK(st.st_mode)) {
 			fprintf(stderr, "Refusing to delete non-socket \"%s\"\n", sock_path_ptr);
-			return -1;
+			return EXIT_FAILURE;
 		}
 		if (unlink(sock_path_ptr) == -1) {
 			snprintf(tmp, sizeof(tmp), "Can't delete existing socket \"%s\"", sock_path_ptr);
@@ -2324,7 +2324,7 @@ cmd_server(int argc, char **argv)
 
 	if (strlen(sock_path_ptr) >= sizeof(addr.sun_path)) {
 		fprintf(stderr, "socket path too long\n");
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	memset(&addr, '\0', sizeof(addr));

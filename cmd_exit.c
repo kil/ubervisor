@@ -27,6 +27,7 @@
  */
 #include <stdio.h>
 #include <unistd.h>
+#include <stdlib.h>
 #include <sys/types.h>
 
 #include "client.h"
@@ -40,17 +41,17 @@ cmd_exit(int argc, char **argv)
 
 	if (argc > 1) {
 		fprintf(stderr, "%s takes no options.\n", argv[0]);
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	if ((sock = sock_connect()) == -1) {
 		fprintf(stderr, "server not running?\n");
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	if (sock_send_command(sock, "EXIT", NULL) == -1) {
 		fprintf(stderr, "write data\n");
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	ret = get_status_reply(sock);

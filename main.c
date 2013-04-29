@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011 Kilian Klimek <kilian.klimek@googlemail.com>
+ * Copyright (c) 2011-2013 Kilian Klimek <kilian.klimek@googlemail.com>
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -83,7 +83,7 @@ help(void)
 	printf("\n");
 	printf("`ubervisor <command> -h` to get a list of supported options.\n");
 	printf("\n");
-	exit(1);
+	exit(EXIT_FAILURE);
 }
 
 int

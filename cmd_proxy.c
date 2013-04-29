@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011 Kilian Klimek <kilian.klimek@googlemail.com>
+ * Copyright (c) 2011-2013 Kilian Klimek <kilian.klimek@googlemail.com>
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -59,7 +59,7 @@ help_proxy(void)
 	printf("\t-h, --help              help.\n");
 	printf("\t-s, --socket PATH       connect to socket at PATH.\n");
 	printf("\n");
-	exit(1);
+	exit(EXIT_FAILURE);
 }
 
 static void
@@ -78,7 +78,7 @@ proxy_read_cb(struct bufferevent *b, void *unused __attribute__((unused)))
 
 	if (ret == -1) {
 		fprintf(stderr, "Error\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 }
 
@@ -87,7 +87,7 @@ proxy_error_cb(struct bufferevent *b __attribute__((unused)),
 		short what __attribute__((unused)),
 		void *cx __attribute__((unused)))
 {
-	exit(1);
+	exit(EXIT_FAILURE);
 }
 
 int
@@ -153,5 +153,5 @@ cmd_proxy(int argc, char **argv)
 	bufferevent_setwatermark(be_sock, EV_READ, 1, BUFFER_SIZ);
 
 	event_dispatch();
-	return 0;
+	return EXIT_SUCCESS;
 }

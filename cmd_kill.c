@@ -55,7 +55,7 @@ help_kill(void)
 	printf("\t-i, --index NUM    send signal only to a single process.\n");
 	printf("\t-s, --signal SIG   send SIG to processes.\n");
 	printf("\n");
-	exit(1);
+	exit(EXIT_FAILURE);
 }
 
 int
@@ -116,7 +116,7 @@ cmd_kill(int argc, char **argv)
 
 	if ((sock = sock_connect()) == -1) {
 		fprintf(stderr, "server not running?\n");
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	if (sock_send_command(sock, "KILL", msg) == -1) {
@@ -127,17 +127,17 @@ cmd_kill(int argc, char **argv)
 
 	if (read_reply(sock, buf, BUFFER_SIZ) == -1) {
 		fprintf(stderr, "Failed to parse reply.\n");
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	if ((obj = json_tokener_parse(buf)) == NULL) {
 		fprintf(stderr, "Failed to parse reply.\n");
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	if ((n = json_object_object_get(obj, "code")) == NULL) {
 		fprintf(stderr, "Failed to parse reply.\n");
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	ret = json_object_get_boolean(n);
@@ -146,12 +146,12 @@ cmd_kill(int argc, char **argv)
 	if (ret == 0) {
 		fprintf(stderr, "Command failed.\n");
 		close(sock);
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	if ((n = json_object_object_get(obj, "pids")) == NULL) {
 		fprintf(stderr, "Failed to parse reply.\n");
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	len = json_object_array_length(n);
@@ -160,5 +160,5 @@ cmd_kill(int argc, char **argv)
 		printf("%d\n", json_object_get_int(e));
 	}
 	json_object_put(obj);
-	return 0;
+	return EXIT_SUCCESS;
 }

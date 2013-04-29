@@ -43,17 +43,17 @@ cmd_dump(int argc, char **argv)
 
 	if (argc > 1) {
 		fprintf(stderr, "%s takes no options.\n", argv[0]);
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	if ((sock = sock_connect()) == -1) {
 		fprintf(stderr, "server not running?\n");
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	if (sock_send_command(sock, "DUMP", NULL) == -1) {
 		fprintf(stderr, "failed.\n");
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	ret = get_status_reply(sock);

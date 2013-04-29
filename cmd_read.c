@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011 Kilian Klimek <kilian.klimek@googlemail.com>
+ * Copyright (c) 2011-2013 Kilian Klimek <kilian.klimek@googlemail.com>
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -63,7 +63,7 @@ help_read(void)
 	printf("Examples:\n");
 	printf("\tuber read -i 4 test\n");
 	printf("\n");
-	exit(1);
+	exit(EXIT_FAILURE);
 }
 
 int
@@ -115,7 +115,7 @@ cmd_read(int argc, char **argv)
 
 	if ((sock = sock_connect()) == -1) {
 		fprintf(stderr, "server running?\n");
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	obj = json_object_new_object();
@@ -134,68 +134,68 @@ cmd_read(int argc, char **argv)
 
 	if (sock_send_command(sock, "READ", b) == -1) {
 		fprintf(stderr, "failed to send command.\n");
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	json_object_put(obj);
 
 	if (read_reply(sock, buf, BUFFER_SIZ) == -1) {
 		fprintf(stderr, "failed to read reply.\n");
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	close(sock);
 
 	if ((obj = json_tokener_parse(buf)) == NULL) {
 		fprintf(stderr, "failed.\n");
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	if (is_error(obj)) {
 		fprintf(stderr, "failed.\n");
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	if (!json_object_is_type(obj, json_type_object)) {
 		fprintf(stderr, "failed.\n");
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	if ((n = json_object_object_get(obj, "offset")) == NULL) {
 		fprintf(stderr, "failed.\n");
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	if (!json_object_is_type(n, json_type_double)) {
 		fprintf(stderr, "failed.\n");
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	printf("off = %lf\n", json_object_get_double(n));
 
 	if ((n = json_object_object_get(obj, "fsize")) == NULL) {
 		fprintf(stderr, "failed.\n");
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	if (!json_object_is_type(n, json_type_double)) {
 		fprintf(stderr, "failed.\n");
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	printf("fsize = %lf\n", json_object_get_double(n));
 
 	if ((n = json_object_object_get(obj, "log")) == NULL) {
 		fprintf(stderr, "failed.\n");
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	if (!json_object_is_type(n, json_type_string)) {
 		fprintf(stderr, "failed.\n");
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	printf("log = %s\n", json_object_get_string(n));
 
-	return 0;
+	return EXIT_SUCCESS;
 }
