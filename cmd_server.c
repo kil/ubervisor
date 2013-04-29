@@ -67,6 +67,10 @@
 #include "compat/queue.h"
 #endif
 
+#define SERVER_LISTEN_BACKLOG			16
+#define HASH_BSIZE_PROCESS			16
+#define HASH_BSIZE_CHILD_CONFIG			16
+
 /*
  * types
  */
@@ -2189,8 +2193,8 @@ cmd_server(int argc, char **argv)
 	log_fd = stdout;
 	LIST_INIT(&child_config_list_head);
 	LIST_INIT(&client_con_list_head);
-	process_hash = uvhash_new(16);
-	child_config_hash = uvstrhash_new(16);
+	process_hash = uvhash_new(HASH_BSIZE_PROCESS);
+	child_config_hash = uvstrhash_new(HASH_BSIZE_CHILD_CONFIG);
 
 	/* read config values from environment */
 	dump_file = getenv("UBERVISOR_CONFIG");
@@ -2340,7 +2344,7 @@ cmd_server(int argc, char **argv)
 
 	umask(oumask);
 
-	listen(fd, 8);
+	listen(fd, SERVER_LISTEN_BACKLOG);
 	printf("socket: %s\n", sock_path_ptr);
 
 	if (server_logfile != NULL)
