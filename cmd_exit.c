@@ -32,6 +32,7 @@
 
 #include "client.h"
 #include "cmd_exit.h"
+#include "misc.h"
 
 int
 cmd_exit(int argc, char **argv)
@@ -45,8 +46,7 @@ cmd_exit(int argc, char **argv)
 	}
 
 	if ((sock = sock_connect()) == -1) {
-		fprintf(stderr, "server not running?\n");
-		return EXIT_FAILURE;
+		die("Failed to connect server");
 	}
 
 	if (sock_send_command(sock, "EXIT", NULL) == -1) {

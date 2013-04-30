@@ -114,8 +114,7 @@ cmd_read(int argc, char **argv)
 		help_read();
 
 	if ((sock = sock_connect()) == -1) {
-		fprintf(stderr, "server running?\n");
-		return EXIT_FAILURE;
+		die("Failed to connect server");
 	}
 
 	obj = json_object_new_object();

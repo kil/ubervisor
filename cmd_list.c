@@ -54,8 +54,7 @@ cmd_list(int argc, char **argv)
 	}
 
 	if ((sock = sock_connect()) == -1) {
-		fprintf(stderr, "server not running?\n");
-		return EXIT_FAILURE;
+		die("Failed to connect server");
 	}
 
 	if (sock_send_command(sock, "LIST", NULL) == -1) {
