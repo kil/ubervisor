@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011 Kilian Klimek <kilian.klimek@googlemail.com>
+ * Copyright (c) 2011-2013 Kilian Klimek <kilian.klimek@googlemail.com>
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -49,6 +49,8 @@ struct process {
 	struct child_config	*p_child_config;
 	int			p_instance;
 	struct event		p_heartbeat_timer;
+	struct bufferevent	*p_child_sockbuf;      		/* pipe to child process pre-execve */
+	int			p_child_sock;
 };
 
 extern uvhash_t			*process_hash;

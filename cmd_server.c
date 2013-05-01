@@ -214,6 +214,40 @@ open_server_log(void) {
 	return 1;
 }
 
+/*
+ * child process pipe callback.
+ */
+static void
+child_read_cb(struct bufferevent *b, void *px __attribute__((unused)))
+{
+	char			buf[1024];
+	size_t			r;
+
+
+	r = bufferevent_read(b, buf, sizeof(buf));
+	if (r > 0) {
+		buf[r] = '\0';
+		slog("%s", buf);
+	}
+}
+
+/*
+ * child pipe error callback.
+ */
+static void
+child_error_cb(struct bufferevent *b __attribute__((unused)),
+		short what __attribute__((unused)), void *px)
+{
+	struct process	*p = px;
+
+	if (p->p_child_sockbuf != NULL) {
+		close(p->p_child_sock);
+		bufferevent_disable(p->p_child_sockbuf, EV_READ);
+		bufferevent_free(p->p_child_sockbuf);
+		p->p_child_sockbuf = NULL;
+	}
+}
+
 
 static void
 drop_client_connection(struct client_con *c)
@@ -446,50 +480,87 @@ schedule_heartbeat(struct process *p)
 }
 
 /*
+ * log errors from spawn_child.
+ */
+static void
+spawn_child_log(struct child_config *cc, const char *func, int fd) {
+	char				buf[1024];
+	int					r;
+
+	/* getpwnam and getgrnam may leave errno at 0 on errors. */
+	if (errno != 0) {
+		r = snprintf(buf, 1024, "spawn failed for \"%s\": %s: %s\n",
+				cc->cc_name, func, strerror(errno));
+	} else {
+		r = snprintf(buf, 1024, "spawn failed for \"%s\": %s failed\n",
+				cc->cc_name, func);
+	}
+	if (r < 0 || r >= (int) sizeof(buf))
+		exit(EXIT_FAILURE);
+	write(fd, buf, r);
+}
+
+/*
  * set uid/gid if needed.
  */
 static void
-spawn_child_setids(struct child_config *cc)
+spawn_child_setids(struct child_config *cc, int pfd)
 {
 	struct passwd		*pw;
 	struct group		*gr;
 
 	if (cc->cc_username != NULL) {
-		if ((pw = getpwnam(cc->cc_username)) == NULL)
+		if ((pw = getpwnam(cc->cc_username)) == NULL) {
+			spawn_child_log(cc, "getpwnam", pfd);
 			exit(EXIT_FAILURE);
+		}
 		cc->cc_uid = pw->pw_uid;
 	}
 
 	if (cc->cc_groupname != NULL) {
-		 if ((gr = getgrnam(cc->cc_groupname)) == NULL)
-			 exit(EXIT_FAILURE);
+		if ((gr = getgrnam(cc->cc_groupname)) == NULL) {
+			spawn_child_log(cc, "getgrnam", pfd);
+			exit(EXIT_FAILURE);
+		}
 		 cc->cc_gid = gr->gr_gid;
 	}
 
 	if (cc->cc_gid != -1) {
-		if (setgid(cc->cc_gid) != 0)
+		if (setgid(cc->cc_gid) != 0) {
+			spawn_child_log(cc, "setgid", pfd);
 			exit(EXIT_FAILURE);
+		}
 
-		if (setegid(cc->cc_gid) != 0)
+		if (setegid(cc->cc_gid) != 0) {
+			spawn_child_log(cc, "setegid", pfd);
 			exit(EXIT_FAILURE);
+		}
 	}
 
 	if (cc->cc_uid != -1) {
-		if (setuid(cc->cc_uid) != 0)
+		if (setuid(cc->cc_uid) != 0) {
+			spawn_child_log(cc, "setuid", pfd);
 			exit(EXIT_FAILURE);
+		}
 
-		if (seteuid(cc->cc_uid) != 0)
+		if (seteuid(cc->cc_uid) != 0) {
+			spawn_child_log(cc, "seteuid", pfd);
 			exit(EXIT_FAILURE);
+		}
 
 		if (cc->cc_uid != 0) {
-			if (setuid(0) != -1)
+			if (setuid(0) != -1) {
+				spawn_child_log(cc, "setuid", pfd);
 				exit(EXIT_FAILURE);
+			}
 		}
 	}
 
 	if (cc->cc_gid > 0) {
-		if (setgid(0) != -1)
+		if (setgid(0) != -1) {
+			spawn_child_log(cc, "setgid", pfd);
 			exit(EXIT_FAILURE);
+		}
 	}
 }
 
@@ -519,52 +590,23 @@ replace_str(char *in, const char *a, const char *b)
 }
 
 /*
- * try to log errors from spawn_child.
- *
- * We try to log to stderr, if defined. Otherwise, or if we can't open the
- * stderr logfile, we try stdout.
- */
-static void
-spawn_child_log(struct child_config *cc, const char *func) {
-	int		fd;
-	FILE		*f = NULL;
-
-	if (cc->cc_stderr != NULL) {
-		if ((fd = open(cc->cc_stderr, _LO_C, _LO_O)) != -1)
-			f = fdopen(fd, "w");
-	}
-
-	if (!f && cc->cc_stdout != NULL) {
-		if ((fd = open(cc->cc_stdout, _LO_C, _LO_O)) == -1) {
-			exit(EXIT_FAILURE);
-		}
-		f = fdopen(fd, "w");
-	}
-
-	if (f) {
-		fprintf(f, "ubervisor: spawn failed for \"%s\": %s: %s\n",
-				cc->cc_name, func, strerror(errno));
-		fclose(f);
-	}
-	exit(EXIT_FAILURE);
-}
-
-/*
  * setup child process. we are already forked here.
  */
 static void
-spawn_child(struct child_config *cc, int instance)
+spawn_child(struct child_config *cc, int instance, int pfd)
 {
 	int		stdout_fd = 0,
 			stderr_fd = 0;
 	char		instance_str[5];
 
 	snprintf(instance_str, sizeof(instance_str), "%d", instance);
-	spawn_child_setids(cc);
+	spawn_child_setids(cc, pfd);
 
 	if (cc->cc_dir != NULL) {
-		if (chdir(cc->cc_dir) == -1)
-			spawn_child_log(cc, "chdir");
+		if (chdir(cc->cc_dir) == -1) {
+			spawn_child_log(cc, "chdir", pfd);
+			exit(EXIT_FAILURE);
+		}
 	}
 	close(0);
 	close(1);
@@ -573,7 +615,7 @@ spawn_child(struct child_config *cc, int instance)
 	if (cc->cc_stdout != NULL) {
 		replace_str(cc->cc_stdout, "%(NUM)", instance_str);
 		if ((stdout_fd = open(cc->cc_stdout, _LO_C, _LO_O)) == -1)
-			spawn_child_log(cc, "open (stdout)");
+			spawn_child_log(cc, "open (stdout)", pfd);
 		dup2(stdout_fd, STDOUT_FILENO);
 		close(stdout_fd);
 	}
@@ -581,14 +623,15 @@ spawn_child(struct child_config *cc, int instance)
 	if (cc->cc_stderr != NULL) {
 		replace_str(cc->cc_stderr, "%(NUM)", instance_str);
 		if ((stderr_fd = open(cc->cc_stderr, _LO_C, _LO_O)) == -1)
-			spawn_child_log(cc, "open (stderr)");
+			spawn_child_log(cc, "open (stderr)", pfd);
 		dup2(stderr_fd, STDERR_FILENO);
 		close(stderr_fd);
 	}
 
 	setsid();
 	execv(cc->cc_command[0], cc->cc_command);
-	spawn_child_log(cc, "execv");
+	spawn_child_log(cc, "execv", pfd);
+	exit(EXIT_FAILURE);
 }
 
 /*
@@ -598,18 +641,24 @@ static int
 spawn(struct child_config *cc, int instance)
 {
 	pid_t		pid;
+	int		pp[2];
 
 	struct process	*p;
+
+	if (socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0, pp) == -1)
+		die("socketpair");
 
 	if ((pid = fork()) == -1) {
 		return 0;
 	}
 
 	if (pid == 0) {
-		spawn_child(cc, instance);
+		close(pp[0]);
+		spawn_child(cc, instance, pp[1]);
 		/* not reached */
 	}
 
+	close(pp[1]);
 	p = xmalloc(sizeof(struct process));
 	p->p_pid = pid;
 	p->p_child_config = cc;
@@ -617,6 +666,18 @@ spawn(struct child_config *cc, int instance)
 	p->p_start = time(NULL);
 	p->p_terminated = 0;
 	p->p_age = cc->cc_age;
+	p->p_child_sock = pp[0];
+
+	setnonblock(pp[0]);
+
+	if ((p->p_child_sockbuf = bufferevent_new(pp[0], child_read_cb, NULL, child_error_cb, p)) != NULL) {
+		if (bufferevent_enable(p->p_child_sockbuf, EV_READ) == -1) {
+			bufferevent_free(p->p_child_sockbuf);
+			p->p_child_sockbuf = NULL;
+			close(pp[0]);
+		}
+	}
+
 	schedule_heartbeat(p);
 	process_insert(p);
 	cc->cc_childs[instance] = p;
@@ -733,6 +794,11 @@ sigchld_cb(int unused0 __attribute__((unused)),
 		slog("[process_exit] %s pid: %d\n", cc_name, pid);
 		process_remove(p);
 		evtimer_del(&(p->p_heartbeat_timer));
+		if (p->p_child_sockbuf != NULL) {
+			bufferevent_disable(p->p_child_sockbuf, EV_READ);
+			bufferevent_free(p->p_child_sockbuf);
+			close(p->p_child_sock);
+		}
 		free(p);
 		if (cc) {
 			if (inst < cc->cc_instances)
