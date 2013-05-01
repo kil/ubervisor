@@ -10,8 +10,13 @@ Synopsis
 Description
 ===========
 
-Subscribe to server notifications. At the moment, the only supported value
-for *ident* is ``1``.
+Subscribe to server notifications.
+
+Supported values for *ident* are:
+
+- 1 (server log)
+- 2 (group status update)
+- 4 (group configuration updates)
 
 See Also
 ========

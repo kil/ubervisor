@@ -1,6 +1,6 @@
 #!/bin/sh
-if [ -x ./ubervisor ]; then
-	UBER=./ubervisor
+if [ -x ./build/ubervisor ]; then
+	UBER=./build/ubervisor
 else
 	UBER=`which ubervisor`
 	if [ -z "$UBER" ]; then
@@ -18,8 +18,7 @@ if [ -z "$1" ]; then
 	exit 1
 fi
 
-GROUPS=$($UBER list)
-for x in $GROUPS; do
+$UBER list | while read x; do
 	echo $x $($UBER $@ $x)
 done
 

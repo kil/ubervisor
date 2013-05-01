@@ -34,6 +34,6 @@ char *sock_path(void);
 int sock_connect(void);
 int sock_write_len(int, unsigned short);
 int sock_send_command(int, const char *, const char *);
-int read_reply(int, char *, size_t);
+char *read_reply(int, size_t *);
 
 #endif /* __CLIENT_H */

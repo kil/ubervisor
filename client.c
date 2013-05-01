@@ -40,71 +40,113 @@
 #include <json/json.h>
 
 #include "main.h"
+#include "cmd_server.h"
 #include "client.h"
 #include "misc.h"
 #include "child_config.h"
 #include "paths.h"
 
 
-int read_reply(int sock, char *buf, size_t buf_siz)
+char *read_reply(int sock, size_t *buf_siz)
 {
 	int		r;
 	uint16_t	len,
 			cid,
-			off = 0;
+			off;
+	char		*ret = NULL;
+	size_t		ret_siz = 0;
+	int		cont = 0;
 
-	if ((r = read(sock, &len, 2)) < 0)
-		return -1;
+	*buf_siz = 0;
 
-	if (r < 2)
-		return -1;
+	do {
+		if ((r = read(sock, &len, 2)) < 0) {
+			if (ret)
+				free(ret);
+			return NULL;
+		}
 
-	if ((r = read(sock, &cid, 2)) < 0)
-		return -1;
+		if (r < 2) {
+			if (ret)
+				free(ret);
+			return NULL;
+		}
 
-	if (r < 2)
-		return -1;
+		if ((r = read(sock, &cid, 2)) < 0) {
+			if (ret)
+				free(ret);
+			return NULL;
+		}
 
-	len = ntohs(len);
+		if (r < 2) {
+			if (ret)
+				free(ret);
+			return NULL;
+		}
 
-	if (len > buf_siz)
-		return -1;
+		len = ntohs(len);
 
-	while (off < len) {
-		r = read(sock, buf + off, len - off);
-		if (r <= 0)
-			return -1;
-		off += r;
-	}
+		if (len == 0) {
+			if (ret)
+				free(ret);
+			return NULL;
+		}
 
-	buf[len] = '\0';
-	return len;
+		if ((len & CHUNKEXT) == CHUNKEXT) {
+			cont = 1;
+			len -= CHUNKEXT;
+		} else {
+			cont = 0;
+		}
+
+		*buf_siz += len;
+		ret = xrealloc(ret, *buf_siz + 1);
+
+		off = 0;
+
+		while (off < len) {
+			r = read(sock, ret + ret_siz + off, len - off);
+			if (r <= 0) {
+				free(ret);
+				return NULL;
+			}
+			off += r;
+		}
+		ret_siz += len;
+	} while(cont);
+
+	ret[*buf_siz] = '\0';
+	return ret;
 }
 
 int
 get_status_reply(int sock)
 {
-	char		buf[BUFFER_SIZ];
+	char		*buf = NULL;
 	int		r;
-
+	size_t		buf_siz;
 	json_object	*obj,
 			*m;
 
 
-	if (read_reply(sock, buf, BUFFER_SIZ) == -1) {
+	if ((buf = read_reply(sock, &buf_siz)) == NULL) {
 		fprintf(stderr, "Failed to parse reply.\n");
 		return 1;
 	}
 
 	if ((obj = json_tokener_parse(buf)) == NULL) {
+		free(buf);
 		fprintf(stderr, "Failed to parse reply.\n");
 		return 1;
 	}
 
 	if (is_error(obj)) {
+		free(buf);
 		fprintf(stderr, "Failed to parse reply.\n");
 		return 1;
 	}
+
+	free(buf);
 
 	if ((m = json_object_object_get(obj, "code")) == NULL) {
 		fprintf(stderr, "Failed to parse reply.\n");
@@ -262,7 +304,8 @@ sock_send_helo(int s)
 {
 	int		r;
 	const char	*msg = "HELO";
-	char		buf[128];
+	char		*buf;
+	size_t		buf_siz;
 
 	json_object	*obj,
 			*m;
@@ -271,22 +314,26 @@ sock_send_helo(int s)
 	if (sock_send_command(s, msg, NULL) != 0)
 		return -1;
 
-	r = read_reply(s, buf, 128);
+	buf = read_reply(s, &buf_siz);
 
-	if (!r) {
+	if (!buf) {
 		close(s);
 		return -1;
 	}
 
 	if ((obj = json_tokener_parse(buf)) == NULL) {
+		free(buf);
 		fprintf(stderr, "Failed to parse reply.\n");
 		return -1;
 	}
 
 	if (is_error(obj)) {
+		free(buf);
 		fprintf(stderr, "Failed to parse reply.\n");
 		return -1;
 	}
+
+	free(buf);
 
 	if ((m = json_object_object_get(obj, "code")) == NULL) {
 		fprintf(stderr, "Failed to parse reply.\n");

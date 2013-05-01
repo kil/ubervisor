@@ -57,6 +57,8 @@ help_subscribe(void)
 	printf("\n");
 	printf("Ident:\n");
 	printf("\t1:\t server log.\n");
+	printf("\t2:\t group status updates.\n");
+	printf("\t4:\t group configuration updates.\n");
 	exit(EXIT_FAILURE);
 }
 
@@ -65,15 +67,12 @@ cmd_subscribe(int argc, char **argv)
 {
 	int			ch,
 				sock,
-				ident,
-				r;
-
-	uint16_t		cid,
-				len;
+				ident;
 
 	char			*msg;
 
-	char			buf[BUFFER_SIZ];
+	char			*buf;
+	size_t			buf_siz;
 
 	json_object		*obj,
 				*n;
@@ -118,32 +117,22 @@ cmd_subscribe(int argc, char **argv)
 
 	free(msg);
 
-	if (read_reply(sock, buf, BUFFER_SIZ) == -1) {
+	if ((buf = read_reply(sock, &buf_siz)) == NULL) {
 		fprintf(stderr, "failed to read reply.\n");
 		return EXIT_FAILURE;
 	}
 
-	while (1) {
-		r = read(sock, &len, sizeof(uint16_t));
-		if (r <= 0)
-			break;
+	free(buf);
 
-		len = ntohs(len);
+	while(1) {
+		if ((buf = read_reply(sock, &buf_siz)) == NULL) {
+			fprintf(stderr, "failed to read reply.\n");
+			return EXIT_FAILURE;
+		}
 
-		if (len > BUFFER_SIZ)
-			break;
+		printf("%s\n", buf);
 
-		r = read(sock, &cid, sizeof(uint16_t));
-		if (r <= 0)
-			break;
-
-		r = read(sock, buf, len);
-
-		if (r <= 0)
-			break;
-
-		buf[r] = '\0';
-		printf("[%d] %s", cid, buf);
+		free(buf);
 	}
 
 	return EXIT_SUCCESS;

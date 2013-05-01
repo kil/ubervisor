@@ -43,7 +43,8 @@ cmd_list(int argc, char **argv)
 			len,
 			i;
 
-	char		buf[BUFFER_SIZ];
+	char		*buf;
+	size_t		buf_siz;
 
 	json_object	*obj,
 			*n;
@@ -63,7 +64,7 @@ cmd_list(int argc, char **argv)
 	}
 
 
-	if (read_reply(sock, buf, BUFFER_SIZ) == -1) {
+	if ((buf = read_reply(sock, &buf_siz)) == NULL) {
 		fprintf(stderr, "Failed to read reply.\n");
 		return EXIT_FAILURE;
 	}
@@ -71,9 +72,12 @@ cmd_list(int argc, char **argv)
 	close(sock);
 
 	if ((obj = json_tokener_parse(buf)) == NULL) {
+		free(buf);
 		fprintf(stderr, "Failed to parse reply.\n");
 		return EXIT_FAILURE;
 	}
+
+	free(buf);
 
 	if (!json_object_is_type(obj, json_type_array)) {
 		fprintf(stderr, "Failed to parse reply.\n");
