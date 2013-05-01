@@ -2275,6 +2275,7 @@ cmd_server(int argc, char **argv)
 				fprintf(stderr, "server running?\n");
 			return EXIT_FAILURE;
 		}
+		close(fd);
 	}
 
 	if (errno == EACCES) {

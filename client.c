@@ -208,8 +208,10 @@ sock_connect(void)
 	addr.sun_family = AF_UNIX;
 	strcpy(addr.sun_path, ptr);
 	addr_len = sizeof(addr);
-	if (connect(ret, (struct sockaddr *) &addr, addr_len) == -1)
+	if (connect(ret, (struct sockaddr *) &addr, addr_len) == -1) {
+		close(ret);
 		return -1;
+	}
 	return ret;
 }
 
