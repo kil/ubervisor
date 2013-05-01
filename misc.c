@@ -73,11 +73,11 @@ int
 setcloseonexec(int fd)
 {
 	int fl;
-	fl = fcntl(fd, F_GETFL);
+	fl = fcntl(fd, F_GETFD);
 	if (fl < 0)
 		return fl;
 	fl |= FD_CLOEXEC;
-	if (fcntl(fd, F_SETFL, fl) < 0)
+	if (fcntl(fd, F_SETFD, fl) < 0)
 		return -1;
 	return 0;
 }
