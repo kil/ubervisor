@@ -45,7 +45,8 @@ cmd_pids(int argc, char **argv)
 
 	char			*msg;
 
-	char			buf[BUFFER_SIZ];
+	char			*buf;
+	size_t			buf_siz;
 
 	json_object		*obj,
 				*n,
@@ -73,15 +74,18 @@ cmd_pids(int argc, char **argv)
 
 	free(msg);
 
-	if (read_reply(sock, buf, BUFFER_SIZ) == -1) {
+	if ((buf = read_reply(sock, &buf_siz)) == NULL) {
 		fprintf(stderr, "Failed to parse reply.\n");
 		return EXIT_FAILURE;
 	}
 
 	if ((obj = json_tokener_parse(buf)) == NULL) {
+		free(buf);
 		fprintf(stderr, "Failed to parse reply.\n");
 		return EXIT_FAILURE;
 	}
+
+	free(buf);
 
 	if ((n = json_object_object_get(obj, "code")) == NULL) {
 		fprintf(stderr, "Failed to parse reply.\n");

@@ -77,7 +77,8 @@ cmd_read(int argc, char **argv)
 
 	const char		*b;
 
-	char			buf[BUFFER_SIZ];
+	char			*buf;
+	size_t			buf_siz;
 
 	double			off = -1.0;
 
@@ -138,7 +139,7 @@ cmd_read(int argc, char **argv)
 
 	json_object_put(obj);
 
-	if (read_reply(sock, buf, BUFFER_SIZ) == -1) {
+	if ((buf = read_reply(sock, &buf_siz)) == NULL) {
 		fprintf(stderr, "failed to read reply.\n");
 		return EXIT_FAILURE;
 	}
@@ -146,14 +147,18 @@ cmd_read(int argc, char **argv)
 	close(sock);
 
 	if ((obj = json_tokener_parse(buf)) == NULL) {
+		free(buf);
 		fprintf(stderr, "failed.\n");
 		return EXIT_FAILURE;
 	}
 
 	if (is_error(obj)) {
+		free(buf);
 		fprintf(stderr, "failed.\n");
 		return EXIT_FAILURE;
 	}
+
+	free(buf);
 
 	if (!json_object_is_type(obj, json_type_object)) {
 		fprintf(stderr, "failed.\n");
