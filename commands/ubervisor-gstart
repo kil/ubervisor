@@ -1,0 +1,9 @@
+#!/bin/sh
+if [ -z "$1" ]; then
+	$UBERVISOR_BIN -v
+	echo
+	echo "Usage: $0 gstart <name>"
+	echo
+	exit 1
+fi
+$UBERVISOR_BIN update -s 1 $1
