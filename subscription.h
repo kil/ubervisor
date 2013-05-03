@@ -33,11 +33,7 @@
 
 #include <stdint.h>
 
-#ifdef HAVE_SYS_QUEUE_H
-#include <sys/queue.h>
-#else
 #include "compat/queue.h"
-#endif
 
 /*
  * values for subscription s_ident

@@ -31,11 +31,7 @@
 
 #include <event.h>
 
-#ifdef HAVE_SYS_QUEUE_H
-#include <sys/queue.h>
-#else
 #include "compat/queue.h"
-#endif
 
 #include "process.h"
 #include "child_config.h"

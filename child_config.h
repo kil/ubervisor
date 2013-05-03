@@ -31,11 +31,7 @@
 #include <time.h>
 #include <sys/types.h>
 
-#ifdef HAVE_SYS_QUEUE_H
-#include <sys/queue.h>
-#else
 #include "compat/queue.h"
-#endif
 
 #include <json/json.h>
 

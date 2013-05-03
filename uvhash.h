@@ -33,11 +33,7 @@
 
 #include "config.h"
 
-#ifdef HAVE_SYS_QUEUE_H
-#include <sys/queue.h>
-#else
 #include "compat/queue.h"
-#endif
 
 /*
  * int key
