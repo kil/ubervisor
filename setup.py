@@ -2,7 +2,7 @@
 from distutils.core import setup
 setup(
     name = 'ubervisor',
-    version = '0.0.2',
+    version = '0.0.3',
     description = 'ubervisor client',
     author = 'Kilian Klimek',
     author_email = 'kilian.klimek@googlemail.com',
