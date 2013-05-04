@@ -121,7 +121,7 @@ class UbervisorClient(object):
         while True:
             self.cid += 1
             if self.cid > 65535:
-                self.cid = 0
+                self.cid = 1
             if not self.cid in self._inuse_cids:
                 break
 
