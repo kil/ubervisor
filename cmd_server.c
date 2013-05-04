@@ -1893,7 +1893,7 @@ run_server_command(char *buf, struct client_con *c)
 static void
 read_cb(struct bufferevent *b, void *cx)
 {
-	char			buf[CHUNKSIZ];
+	char			buf[CHUNKSIZ + 1];
 	uint16_t		len,
 				cid;
 	size_t			r;
