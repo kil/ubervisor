@@ -1,0 +1,57 @@
+=========
+Internals
+=========
+
+This section documents internals of ubervisor.
+
+
+Protocol
+--------
+
+Messages are send in chunks.
+
+Chunk Format
+^^^^^^^^^^^^
+
+Chunks send to and send by the server are composed of three values.
+
+First comes the ``length`` field. This is the size in bytes of the chunk as a
+16bit unsigned integer, send in `network byte order`_.
+
+The 2 most significant bits have special meaning and don't count towards the
+size of the chunk. The highest bit (the ``CHUNKEXT`` bit) is set if the
+message continues into another chunk.
+
+The other bit is reserved for future use (called ``CHUNKRESERVED`` for now).
+The actual size of a chunk is::
+
+  size = length_field BITWISE_AND 0x3fff
+
+where *size* does **NOT** includes the two bytes of the ``cid`` field. The
+total size of a chunk is len + 2 (length field) + 2 (cid field).
+
+At the moment, for messages send to the server the ``CHUNKEXT`` bit is not
+honored: the payload of requests cannot exceed 16383 bytes.
+
+The second field in a chunk is the ``cid`` (*command id*) field. This is
+a 16bit unsigned integer, send in `network byte order`_. It is used to
+match a reply to a request. If you send a request to the server with ``cid``
+1234, the server will use this ``cid`` for the chunks that are in reply
+to that command. It is up to the client to manage ``cids``.
+
+The third field is the ``payload``. If a chunk has the ``CHUNKEXT`` bit set,
+the ``payload`` is incomplete (i.e. continue reading chunks until the
+``CHUNKEXT`` bit is not set).
+
+For replies ``payload`` is a `JSON`_ encoded object (or part of it, if more
+chunks follow).
+
+For requests the JSON encoded data is prependend by a four byte string,
+identifying the command.
+
+
+
+.. _network byte order: http://en.wikipedia.org/wiki/Network_byte_order#Endianness_in_networking
+.. _JSON: http://en.wikipedia.org/wiki/JSON
+
+.. vim:spell:ft=rst

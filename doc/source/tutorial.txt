@@ -9,6 +9,10 @@ Start a ubervisor server by running::
 
    ubervisor server -f
 
+.. note::
+
+  If you want the server to start during boot, see :ref:`ubervisor-boot-start`.
+
 This will run the server in foreground mode, logging to ``stdout``, so we can
 see what is going on. Now switch to another terminal and instruct the server
 to start something. We will use ``sleep``::

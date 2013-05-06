@@ -7,9 +7,11 @@ Contents:
    :maxdepth: 2
 
    overview
+   install
    tutorial
    man
    client
+   internals
 
 Indices and tables
 ==================

@@ -1,0 +1,93 @@
+====================
+Install Instructions
+====================
+
+Dependencies
+------------
+
+When building from source, you will need cmake, libevent and libjson.
+To safe you some time finding the right packages, here are lists of
+packages for popular systems.
+
+============ =========================================================
+OS           Package names
+============ =========================================================
+Ubuntu       libevent-dev libjson0-dev cmake
+OpenSUSE     libevent-devel libjson0 cmake
+FreeBSD      libevent json-c cmake
+============ =========================================================
+
+For example, on Ubuntu ``apt-get install libevent-dev libjson0-dev cmake``
+should get you set.
+
+Get the source
+--------------
+
+Via git::
+
+  git clone https://github.com/kil/ubervisor.git
+
+Or get the `latest master tarball`_.
+
+The master branch is usually safe. To be extra sure use the latest tag.
+
+Building from source
+--------------------
+
+If you already have the build dependencies installed, change to the source
+directory and run ``build.sh``::
+
+  cd ubervisor && ./build.sh
+
+To build man pages you will also need `sphinx`_ (packages usually available). 
+Change to the build directory and run ``make man``::
+
+  cd build && make man
+
+This documentation (also available online at `ubervisor.readthedocs.org`_)
+can be build with::
+
+  make htmldoc
+
+.. _ubervisor-boot-start:
+
+Starting ubervisor
+------------------
+
+Debian based systems
+^^^^^^^^^^^^^^^^^^^^
+
+Copy the init.d script::
+
+  sudo cp scripts/ubervisor_debian /etc/init.d/ubervisor
+  sudo update-rc.d -f ubervisor defaults
+
+Systems using systemd
+^^^^^^^^^^^^^^^^^^^^^
+
+Use::
+
+  sudo cp scripts/ubervisor.service /etc/systemd/system/
+  sudo systemctl enable ubervisor.service
+
+.. warning:: /etc/ubervisor/ubervisor_server.conf has to exist.
+
+  ``/etc/ubervisor/ubervisor_server.conf`` is a environment file used
+  for configuration. See :ref:`ubervisor-server-env` section of the
+  server command documentation  or the ubervisor-server(1) man page.
+
+Building Packages
+-----------------
+
+Packages can be built with ``cpack``, e.g.::
+
+  cpack -G DEB
+
+Other supported formats are ``TGZ`` and ``RPM``.
+
+
+.. _latest master tarball: https://github.com/kil/ubervisor/archive/master.zip
+.. _sphinx: http://sphinx-doc.org/
+.. _ubervisor.readthedocs.org: http://ubervisor.readthedocs.org/en/latest/
+
+.. vim:spell:ft=rst

@@ -37,6 +37,8 @@ Options
 -P, --perm PERM         set file access permissions on socket file (default: 600).
 -s, --silent            exit silently if server is already running.
 
+.. _ubervisor-server-env:
+
 Environment
 ===========
 
