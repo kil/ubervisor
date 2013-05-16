@@ -643,7 +643,7 @@ spawn(struct child_config *cc, int instance)
 
 	struct process	*p;
 
-	if (socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0, pp) == -1)
+	if (socketpair(AF_UNIX, SOCK_STREAM, 0, pp) == -1)
 		return 0;
 
 	if ((pid = fork()) == -1) {
@@ -652,11 +652,13 @@ spawn(struct child_config *cc, int instance)
 
 	if (pid == 0) {
 		close(pp[0]);
+		setcloseonexec(pp[1]);
 		spawn_child(cc, instance, pp[1]);
 		/* not reached */
 	}
 
 	close(pp[1]);
+	setcloseonexec(pp[0]);
 	p = xmalloc(sizeof(struct process));
 	p->p_pid = pid;
 	p->p_child_config = cc;
