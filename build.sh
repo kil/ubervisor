@@ -15,8 +15,9 @@ fi
 
 if [ "$1" = "scan" ]; then
 	BUILD_TYPE=Debug
-	ARGS_EXTRA+=-DCMAKE_C_COMPILER:string=/usr/bin/ccc-analyzer
+	ARGS_EXTRA="$ARGS_EXTRA -DCMAKE_C_COMPILER:string=/usr/bin/ccc-analyzer"
 	SCAN_BUILD=scan-build
+	unset CC
 fi
 
 if [ ! -z "$2" ]; then
@@ -24,7 +25,7 @@ if [ ! -z "$2" ]; then
 fi
 
 if [ ! -z "$CC" ]; then
-	ARGS_EXTRA+=-DCMAKE_C_COMPILER:string=$CC
+	ARGS_EXTRA="$ARGS_EXTRA -DCMAKE_C_COMPILER:string=$CC"
 fi
 
 cmake -DCMAKE_INSTALL_PREFIX:string=$INSTALL_PREFIX \
