@@ -26,9 +26,13 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include <stdio.h>
+#include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
+#include "config.h"
 #include "cmd_server.h"
 #include "client.h"
 #include "cmd_start.h"
@@ -91,6 +95,8 @@ main(int argc, char **argv)
 {
 	int		ret = 1;
 	char		*cmd;
+	char		cdir[BUFSIZ];
+	struct stat	st;
 
 	program_name = argv[0];
 
@@ -130,6 +136,21 @@ main(int argc, char **argv)
 	} else if (!strcmp(cmd, "-v") || !strcmp(cmd, "-V")) {
 		print_version();
 	} else {
+		/* check for script command */
+		snprintf(cdir, sizeof(cdir), "./commands/ubervisor-%s", cmd);
+		if (stat(cdir, &st) == -1) {
+			snprintf(cdir, sizeof(cdir),
+					 INSTALL_PREFIX "/ubervisor-%s", cmd);
+		}
+
+		if (stat(cdir, &st) == 0) {
+			setenv("UBERVISOR_BIN", program_name, 0);
+			argv[0] = cdir;
+			execv(argv[0], argv);
+			exit(EXIT_FAILURE);
+		}
+
+		/* script not found, display help */
 		help();
 	}
 
