@@ -736,7 +736,7 @@ class TestBigMsg(BaseTest):
         cmd = ['/bin/sleep', '1']
         self.c.start(self.big_name, cmd, status = 2)
         ret = self.c.list()
-        self.assertEqual([self.big_name], ret)
+        self.assertTrue(self.big_name in ret)
         self.c.delete(self.big_name)
 
     def test_too_big_cmd(self):
