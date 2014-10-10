@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2013 Kilian Klimek <kilian.klimek@googlemail.com>
+ * Copyright (c) 2011-2014 Kilian Klimek <kilian.klimek@googlemail.com>
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -140,7 +140,7 @@ main(int argc, char **argv)
 		snprintf(cdir, sizeof(cdir), "./commands/ubervisor-%s", cmd);
 		if (stat(cdir, &st) == -1) {
 			snprintf(cdir, sizeof(cdir),
-					 INSTALL_PREFIX "/ubervisor-%s", cmd);
+					 COMMAND_PREFIX "/ubervisor-%s", cmd);
 		}
 
 		if (stat(cdir, &st) == 0) {
